@@ -1,10 +1,10 @@
 from src.player.player_engine import PlayerEngine
 from src.game.game_state import GameState
-from src.game.move import Action
+from game.action import Action
 
 
 class Player:
-    def __init__(self, name: str, player_engine: PlayerEngine):
+    def __init__(self, name: str, player_engine: PlayerEngine, id: int):
         self._name = name
         self._victory_for_tournament = {}
         self._defeat_for_tournament = {}
@@ -12,6 +12,7 @@ class Player:
         self._points_for_tournament = {}
         self._rank_for_tournament = {}
         self._player_engine = player_engine
+        self._id = id
 
     @property
     def name(self):
@@ -28,6 +29,10 @@ class Player:
     @property
     def draw_for_tournament(self):
         return self._draw_for_tournament
+
+    @property
+    def id(self):
+        return self._id
 
     @property
     def points_for_tournament(self):
