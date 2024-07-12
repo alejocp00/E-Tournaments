@@ -1,3 +1,8 @@
+from src.player.player_engine import PlayerEngine
+from src.game.game_state import GameState
+from src.game.move import Action
+
+
 class Player:
     def __init__(self, name: str, player_engine: PlayerEngine):
         self._name = name
@@ -52,7 +57,7 @@ class Player:
     def best_rank(self):
         return max(self._rank_for_tournament.values())
 
-    def perform_a_move(self, game_state: GameState) -> Move:
+    def perform_a_move(self, game_state: GameState) -> Action:
         move = self._player_engine.get_next_action(game_state)
 
         return move

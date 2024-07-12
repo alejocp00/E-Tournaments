@@ -1,4 +1,5 @@
 from src.player.player import Player
+from src.game.move import Action
 
 
 class GameState:
@@ -6,7 +7,7 @@ class GameState:
     def __init__(
         self,
         players: list[Player],
-        game_explorer: callable[list[Move]],
+        game_explorer: callable[list[Action]],
         current_player_index: int = 0,
     ):
         self._players = players
@@ -30,5 +31,5 @@ class GameState:
     def player_turn_queue(self):
         return self._player_turn_queue
 
-    def get_all_moves(self) -> list[Move]:
+    def get_all_moves(self) -> list[Action]:
         return self._game_explorer()
