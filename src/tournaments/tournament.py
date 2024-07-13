@@ -31,3 +31,6 @@ class Tournament:
 
     def __next__(self):
         return self._tournament_engine.next_match(self)
+
+    def is_valid_configuration(self):
+        return self._tournament_engine.is_valid_configuration(self._players.count())
