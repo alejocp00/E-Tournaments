@@ -28,6 +28,7 @@ class TTTGameState(GameState):
                     moves.append(
                         Action(
                             self.current_player.id,
+                            self.current_player.name,
                             {"i": i, "j": j, "token": player_token},
                         )
                     )
