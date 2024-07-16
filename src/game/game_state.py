@@ -1,19 +1,31 @@
+from abc import abstractmethod
+from src.game.action import Action
 from src.player.player import Player
-from src.game.move import Action
 
 
 class GameState:
 
+    IDLE = 0
+    IN_PROGRESS = 1
+    FINISHED = 2
+
+    @property
+    def state(self) -> int:
+        return self._state
+
+    @state.setter
+    def state(self, state):
+        self._state = state
+
     def __init__(
         self,
         players: list[Player],
-        game_explorer: callable[list[Action]],
         current_player_index: int = 0,
     ):
         self._players = players
         self._current_player_index = current_player_index
         self._player_turn_queue = [current_player_index]
-        self._game_explorer = game_explorer
+        self._state = GameState.IDLE
 
     @property
     def current_player_index(self):
@@ -24,12 +36,21 @@ class GameState:
         return self._players[self.current_player_index]
 
     @property
-    def players(self):
+    def players(self) -> list[Player]:
         return self._players
 
     @property
     def player_turn_queue(self):
         return self._player_turn_queue
 
+    def get_next_player(self):
+        self._current_player_index = self._player_turn_queue.pop(0)
+        return self._players[self._current_player_index]
+
+    @abstractmethod
+    def set_next_player(self):
+        raise NotImplementedError
+
+    @abstractmethod
     def get_all_moves(self) -> list[Action]:
-        return self._game_explorer()
+        raise NotImplementedError
