@@ -1,0 +1,5 @@
+hay que tener instalado node, npm(viene con node creo)
+luego en la carpeta de socket correr npm install, y npm install socket.instalado
+para correr los socket en la terminal pones node server/server; luego abres enla web localhost:300, y veras que aparece que esta conectado un nuevo usuario
+
+dudasal pv :)
