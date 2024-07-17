@@ -5,10 +5,10 @@ from src.game.game_state import GameState
 
 
 class Game(ABC):
-    def __init__(self, game_name: str, id: int):
+    def __init__(self, game_name: str):
         self._game_name = game_name
         self._players = []
-        self._id = id
+        self._id = -1
         self._game_state = None
         self._log = []
 
@@ -27,6 +27,12 @@ class Game(ABC):
     @property
     def game_state(self) -> GameState:
         return self._game_state
+
+    def clone(self):
+        return self.__class__(self._game_name)
+
+    def set_game_id(self, id: int):
+        self._id = id
 
     def add_player(self, player: Player):
         self._players.append(player)
