@@ -6,8 +6,9 @@ from src.player.player import Player
 
 
 class TournamentEngine(ABC):
-    def __init__(self):
-        self._tournament_type = "NOT SET"
+
+    def __init__(self, tournament_type: str):
+        self._tournament_type = tournament_type
 
     @property
     def tournament_type(self):
