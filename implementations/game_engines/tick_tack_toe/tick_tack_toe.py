@@ -9,8 +9,8 @@ from implementations.game_engines.tick_tack_toe.src.ttt_game_state import (
 
 
 class TickTackToeGame(Game):
-    def __init__(self, id: int):
-        super().__init__("TickTackToe", id)
+    def __init__(self):
+        super().__init__("TickTackToe")
 
     def init_game_state(self):
         self._game_state = TickTackToeGameState(self.players, self.game_explorer)
