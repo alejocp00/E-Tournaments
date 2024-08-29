@@ -64,3 +64,6 @@ class Config:
         # Todo: add player amount validation. For now, it's always valid
         # The idea of player amount validation is to check if the selected tournament with the selected game allow the player amount
         return True
+    
+    def is_valid_configuration(self)->bool:
+        return self.is_valid_game() and self.is_valid_tournament() and self.is_valid_player_amount()
