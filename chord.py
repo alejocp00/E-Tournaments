@@ -11,7 +11,7 @@ from utils import (
     recieve_multipart_timeout, zpipe
     )
 
-
+#! This class will be the server engine, where you add a new node if a new tournament is created, look up for the replica and other requests
 class ChordNode:
     def __init__(self, m) -> None:
         '''
@@ -478,7 +478,6 @@ class ChordNode:
         
         self.joined = True
         recv_router.send_multipart([router_id, ANS_JOIN, info])
-
 
     def __get_id_from_ip_table(self, router, ip, ip_table) -> bytes:
         '''
