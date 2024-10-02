@@ -1,5 +1,8 @@
-import sys
-from chord import ChordNode
+from conexiones.lib.protocols import *
+from src.tournaments.tournament import *
+from implementations.game_engines.tick_tack_toe.src.ttt_game_state import *
+from implementations.player_engines.all_games_random_player.all_games_random_player import *
+from implementations.tournament_engines.direct_elimination.direct_elimination import *
 
 import logging
 import struct
@@ -7,7 +10,7 @@ import pickle
 import socket
 import time
 import threading
-import os
+import os 
 
 PORT = 1112
 plays = []
@@ -15,100 +18,59 @@ sock = -1
 game_instance = None
 plays_rlock = threading.RLock()
 
-#! Implement client logic to create a new node to the CHORD and new tournament with socket zmq and not socket
-def main(m:int):
-    c = ChordNode(m)
-    c.run()
-    commands = {
-        "join": c.join,
-        "lookup": c.lookup,
-        "predecessor":c.find_predecessor,
-        "successor":c.find_succesor,
-        "exit": c.exit,
-        "ft":c.get_finger_table,
-        "ns":c.get_node_set,
-        "ip":c.get_ip_table
-    }
-    while True:
-        try:
-            usr_input = input().split()
-            if len(usr_input) == 0:
-                continue
-            arg_0 = usr_input[0]
-            try:
-                command = commands[arg_0]
-            except KeyError:
-                print("Unrecognized command")
-                continue
+#! Implement client logic to create a new node to the CHORD and new tournament with and not socket
+def main():
 
-            try:
-                args = []
-                if arg_0 == "join" and len(usr_input) > 1:
-                    args.append(usr_input[1])
-                elif len(usr_input) > 1:
-                    args.append(int(usr_input[1]))
-            except IndexError:
-                print("Bad Arguments")
-                continue
+    global sock
+    global plays
+    global plays_rlock
+    global playcount
+    logging.basicConfig(filename='client.log', filemode='w', format='%(asctime)s - %(message)s')
+    client_down = cd()
+    sock,pro = sendrecv_multicast() 
+
+    if sock!=-1:   
+        if(type(pro) == cd):
+            if pro.resume:            
+                resp = ''
+                while True:
+                    resp = input('Do you want to continue the unfinished tournament? (y/n): ').lower()
+                    if resp == 'y' or resp == 'n':
+                        break
+                client_down.response = True if resp == 'y' else False
+                if(resp == 'y'):
+                    resp = ''
+                    while True:
+                        resp = input('Do you want to watch it since the last checkpoint? (y/n): ').lower()
+                        if resp == 'y' or resp == 'n':
+                            break
+                    client_down.state = True if resp == 'y' else False
+                    client_down.ip = socket.gethostbyname(socket.gethostname())
+                    #print(f'client_down.response={client_down.response} client_down.state={client_down.state} client_down.ip={client_down.ip}')
+            if(not client_down.response):
+                playcount = 0
+                plays = []
+                plays_rlock = threading.RLock()
+                start_game = sg()
+                tournaments = create_games()       
+                start_game.games = tournaments
+                start_game.ip = socket.gethostbyname(socket.gethostname())
+                data = pickle.dumps(start_game)
+            else:
+                logging.warning(f'enviando client response')
+                data = pickle.dumps(client_down)
             
-            print(command(*args))
-            if arg_0 == "exit":
-                break
-        
-        except KeyboardInterrupt:
-            print("Exit")
-            c.joined = False
-            c.online = False
-            exit(1)
+        try:
+            sock.send(data)
+            x = pickle.loads(data)
+            if(type(x) == cd):
+                logging.warning(f'enviado cd state={x.state}')
+            #print(f'\nEnvie sg data={data}')
+            time.sleep(.5)
+            receiver(data)
+        except socket.error as e:
+            print(f'Error send/recv x multicast {e.errno}') 
 
-#    global sock
-#    global playcount
-#    global plays
-#    global plays_rlock
-#    logging.basicConfig(filename='client.log', filemode='w', format='%(asctime)s - %(message)s')
-#    client_down = cd()
-#    sock,pro = sendrecv_multicast()   
-#    if sock!=-1:   
-#        if(type(pro) == cd):
-#            if pro.resume:            
-#                resp = ''
-#                while True:
-#                    resp = input('Do you want to continue the unfinished tournament? (y/n): ').lower()
-#                    if resp == 'y' or resp == 'n':
-#                        break
-#                client_down.response = True if resp == 'y' else False
-#                if(resp == 'y'):
-#                    resp = ''
-#                    while True:
-#                        resp = input('Do you want to watch it since the last checkpoint? (y/n): ').lower()
-#                        if resp == 'y' or resp == 'n':
-#                            break
-#                    client_down.state = True if resp == 'y' else False
-#                    client_down.ip = socket.gethostbyname(socket.gethostname())
-#                    #print(f'client_down.response={client_down.response} client_down.state={client_down.state} client_down.ip={client_down.ip}')
-#            if(not client_down.response):
-#                playcount = 0
-#                plays = []
-#                plays_rlock = threading.RLock()
-#                start_game = sg()
-#                tournaments = create_games()       
-#                start_game.games = tournaments
-#                start_game.ip = socket.gethostbyname(socket.gethostname())
-#                data = pickle.dumps(start_game)
-#            else:
-#                logging.warning(f'enviando client response')
-#                data = pickle.dumps(client_down)
-#            
-#        try:
-#            sock.send(data)
-#            x = pickle.loads(data)
-#            if(type(x) == cd):
-#                logging.warning(f'enviado cd state={x.state}')
-#            #print(f'\nEnvie sg data={data}')
-#            time.sleep(.5)
-#            receiver(data)
-#        except socket.error as e:
-#            print(f'Error send/recv x multicast {e.errno}')
 
 def sendrecv_multicast():
     try:
@@ -256,18 +218,7 @@ def receiver(tnmt):
 
 def create_games():
         global game_instance
-        print('\nWelcome to Games Tournaments Simmulator!!!')        
-        tournament_type = None
-        while True:
-            tournament_type =  input('Type the type of the tournament ( elimination (e) dos_a_dos (d) ): ')
-            if tournament_type in ['e', 'd']:
-                break
-            
-        game_type = None
-        while True:
-            game_type =  input('Type the type of the game ( nim (n) tictactoe (t) ): ')
-            if game_type in ['n', 't']:
-                break
+        print('\nWelcome to E-Tournaments Simmulator!')  
         
         player_list = []
         flag = False
@@ -285,50 +236,19 @@ def create_games():
                 break
 
         while(True):  
-            player_names = input('Type names of each player: ').split(' ')
+            player_names = input('Type names of each player in this line: ').split(' ')
             if(len(player_names) == number_players):
                 break
-
-        while(True):
-            player_types = input('Type the type of each player ( optimal (o) random (r) ): ').split(' ')
-            if(len(player_types) == number_players):
-                for j in range(number_players):
-                    if player_types[j] == 'o' or player_types[j] == 'r' :
-                        continue
-                else:
-                    break
         
         initial_state = 0
-
-        if(game_type == 'n'):
-            while True:    
-                try:
-                    initial_state = int(input('Type how many sticks for each game: ') )
-                    break
-                except: pass
         
-        if game_type == 'n':
-            game_instance = nim_game()
-        else:
-            game_instance = tic_tac_toe()
+        game_instance = TTTGameState()
         
         for j in range(number_players):
-            if(player_types[j] == 'o'):
-                player_list.append(optimal_player(player_names[j], game_type))
-            else:
-                player_list.append(random_player(player_names[j], game_type))
+            player_list.append(AllGamesRandomPlayer(player_names[j]))
         
-        if tournament_type == 'e':
-            tournament_instance = elimination(player_list, initial_state,  game_instance)
-        else:
-            tournament_instance = dosAdos(player_list, initial_state,  game_instance)
-    
+        tournament_instance = DirectElimination(player_list, initial_state,  game_instance)
+
         return tournament_instance
 
-if __name__ == "__main__":
-    arg = sys.argv
-    if len(arg) == 1:
-        m = 5
-    else:
-        m = int(arg[1])
-    main(m)
+main()
