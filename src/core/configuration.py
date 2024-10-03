@@ -10,6 +10,7 @@ class Config:
         self._tournament_engine : TournamentEngine | None = None
         self._game : Game | None = None
         self._already_set_players_in_game = False
+        self._last_id_given = -1
         
     @property
     def players_in_game(self):
@@ -18,6 +19,7 @@ class Config:
     @players_in_game.setter
     def players_in_game(self, players_in_game : list[Player]):
         self._players_in_game = players_in_game
+        self._already_set_players_in_game = self._players_in_game is not None and len(self._players_in_game) > 0
 
     def add_player(self, player : Player):
         self._players_in_game.append(player)
@@ -49,11 +51,16 @@ class Config:
     @property
     def already_set_players_in_game(self)->bool:
         return  self._already_set_players_in_game
+    
+    def get_id_for_new_player(self) -> int:
+        self._last_id_given += 1
+        return self._last_id_given
 
     def is_valid_game(self)-> bool:
         # Todo: add game validation. For now, it's always valid
         # The idea of game validation is to check if the selected tournament allow the game
-        return True
+                
+        return self.already_set_tournament_engine and self.already_set_game and self.already_set_players_in_game
     
     def is_valid_tournament(self)->bool:
         # Todo: add tournament validation. For now, it's always valid
