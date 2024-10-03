@@ -1,6 +1,6 @@
 from abc import abstractmethod
 from src.game.action import Action
-from src.player.player import Player
+# from src.player.player import Player
 
 
 class GameState:
@@ -19,7 +19,7 @@ class GameState:
 
     def __init__(
         self,
-        players: list[Player],
+        players,
         current_player_index: int = 0,
     ):
         self._players = players
@@ -36,7 +36,7 @@ class GameState:
         return self._players[self.current_player_index]
 
     @property
-    def players(self) -> list[Player]:
+    def players(self) -> list:
         return self._players
 
     @property

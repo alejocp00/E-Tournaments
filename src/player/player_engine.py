@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from src.game.game_state import GameState
-from game.action import Action
+from src.game.action import Action
 
 
 class PlayerEngine(ABC):

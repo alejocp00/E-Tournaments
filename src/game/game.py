@@ -1,5 +1,5 @@
 from abc import abstractmethod, ABC
-from game.action import Action
+from src.game.action import Action
 from src.player.player import Player
 from src.game.game_state import GameState
 

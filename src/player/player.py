@@ -1,6 +1,6 @@
 from src.player.player_engine import PlayerEngine
 from src.game.game_state import GameState
-from game.action import Action
+from src.game.action import Action
 
 
 class Player:
@@ -92,3 +92,6 @@ class Player:
 
     def change_name(self, new_name: str):
         self._name = new_name
+
+    def __str__(self):
+        return self._name + ":" + str(self._id)
