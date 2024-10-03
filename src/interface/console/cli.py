@@ -8,66 +8,77 @@ class CLI:
         # TODO: Poblar constructor
 
     def select_configuration(self) -> None:
-        # Todo: Show Actual settings
 
-        # Showing Menu
-        options = ["Players","Game","Tournament","Exit"]
-        
-        # Check if any settings are already set
-        for i in range(len(options)):
-            if options[i] == "Players":
-                if self._config.already_set_players_in_game():
-                    options[i] = "Change "
-                else:
-                    options[i] = "Set "
-            elif options[i] == "Game":
-                if self._config.already_set_game():
-                    options[i] = "Change "
-                else:
-                    options[i] = "Set "
-            elif options[i] == "Tournament":
-                if self._config.already_set_tournament_engine():
-                    options[i] = "Change "
-                else:
-                    options[i] = "Set "
+        while True:
+            # Todo: Show Actual settings
 
-        # Check if all settings are set
-        if self._config.is_valid_configuration():
-            options[options.index("Exit")] = "Start with this settings"
-            options.append("Exit")
-        
-        # Get input from user
-        selected_option = self.option_selector("Select Option: ","Invalid Option", options)
-        
-        # Select option
-        if "player" in options[selected_option].lower():
-            self._config.set_players()
-        elif "game" in options[selected_option].lower():
-            self._config.set_game()
-        elif "tournament" in options[selected_option].lower():
-            self._config.set_tournament_engine()
-        elif "start" in options[selected_option].lower():
-            self._config.start_tournament() # Todo: Who starts the tournament?
-        elif "exit" in options[selected_option].lower():
-            return
-        
-        
-        # Check if all settings are set
-        if self._config.is_valid_configuration():
-            message = "" # Todo: Show Actual settings
-            message += Fore.GREEN + "All settings are set. Did you want to start the tournament or change some settings?" + Fore.RESET
-            options = ["Start Tournament","Change Settings"]
-            selected_option = self.option_selector(message,"Invalid Option", options)
+            # Print Players
+            config_text = ""
+            if self._config.players_in_game is not None and len(self._config.players_in_game) > 0:
+                config_text += Fore.GREEN + "Players: " + Fore.RESET + "\n"
+                for player in self._config.players_in_game:
+                    config_text += "\t" + str(player) +"\n"
             
-            if options[selected_option] == "Start Tournament":
+            # Showing Menu
+            options = ["Players","Game","Tournament","Exit"]
+
+            # Check if any settings are already set
+            for i in range(len(options)):
+                if options[i] == "Players":
+                    if self._config.already_set_players_in_game:
+                        options[i] = "Change "
+                    else:
+                        options[i] = "Set "
+                    options[i]+= "Players"
+                elif options[i] == "Game":
+                    if self._config.already_set_game:
+                        options[i] = "Change "
+                    else:
+                        options[i] = "Set "
+                    options[i] += "Game"
+                elif options[i] == "Tournament":
+                    if self._config.already_set_tournament_engine:
+                        options[i] = "Change "
+                    else:
+                        options[i] = "Set "
+                    options[i] += "Tournaments"
+
+            # Check if all settings are set
+            if self._config.is_valid_configuration():
+                options[options.index("Exit")] = "Start with this settings"
+                options.append("Exit")
+
+            # Get input from user
+            selected_option = self.option_selector("Select Option: ","Invalid Option", options, config_text)
+
+            # Select option
+            if "player" in options[selected_option].lower():
+                self.set_players()
+            elif "game" in options[selected_option].lower():
+                self.set_game()
+            elif "tournament" in options[selected_option].lower():
+                self._config.set_tournament_engine()
+            elif "start" in options[selected_option].lower():
                 self._config.start_tournament() # Todo: Who starts the tournament?
-            elif options[selected_option] == "Change Settings":
-                self.select_configuration()
-            
+            elif "exit" in options[selected_option].lower():
+                return
+
+            # Check if all settings are set
+            if self._config.is_valid_configuration():
+                message = "" # Todo: Show Actual settings
+                message += Fore.GREEN + "All settings are set. Did you want to start the tournament or change some settings?" + Fore.RESET
+                options = ["Start Tournament","Change Settings"]
+                selected_option = self.option_selector(message,"Invalid Option", options)
+
+                if options[selected_option] == "Start Tournament":
+                    self._config.start_tournament() # Todo: Who starts the tournament?
+                elif options[selected_option] == "Change Settings":
+                    self.select_configuration()
 
     def _clear_console(self) -> None:
         system("cls||clear")
-    def option_selector(self,initial_prompt,error_message:str,options:list[str],) -> int:
+        
+    def option_selector(self,initial_prompt,error_message:str,options:list[str],prev_text:str = "",) -> int:
         '''
         Selects an option from a list of options
         
@@ -85,25 +96,26 @@ class CLI:
         int
             Selected option
         '''
-        # Clear the console
-        self._clear_console()
 
         selected_option = -1
 
+        # Variables for handle errors
+        exist_error = False
+        error_input = ""
         # While option is not set, ask for input
         while selected_option < 0:
-            # Variables for handle errors
-            exist_error = False
-            error_input = ""
-            
-            
+            # Clear the console
+            self._clear_console()
+
+            print(prev_text)
+    
             # Show options
             for i in range(len(options)):
                 print(Fore.BLUE + str(i+1)+". " + Fore.RESET + options[i])
-            
+
             # Prepare input text
             input_text = Fore.GREEN + initial_prompt + Fore.RESET
-            
+
             # Check if there was an error
             if exist_error:
                 input_text = Fore.RED + error_message + "\n" + "Wrong input: " + error_input + Fore.RESET + "\n" + input_text
@@ -119,6 +131,36 @@ class CLI:
                 exist_error = True
                 error_input = input_result
             else:
-                selected_option = int(input_result)
+                selected_option = int(input_result) - 1
 
         return selected_option
+
+    def set_players(self):
+        """ Select the players for the game
+        """
+        from src.core.importers import get_all_implementations_of, ImplementationsTypes
+        from src.player.player import Player
+
+        # Get number of players
+        players = []
+        engines = get_all_implementations_of(ImplementationsTypes.Player)
+        one_more = True
+
+        while one_more:
+            name_of_player = input("Insert the name of player {}: ".format(len(players)+1))
+            engine = self.option_selector("Select Player Engine: ","Invalid Option", [pair[0] for pair in engines])
+            players.append(Player(name_of_player, engines[engine][1](),self._config.get_id_for_new_player()))
+            
+            one_more = self.option_selector("One more player?: ","Invalid Option", ["Yes","No"]) == 0
+            
+        self._config.players_in_game = players
+
+    def set_game(self):
+        from src.core.importers import get_all_implementations_of, ImplementationsTypes
+        from src.game.game import Game
+
+        # Get number of players
+        games = get_all_implementations_of(ImplementationsTypes.Game)
+        engine = self.option_selector("Select Game: ","Invalid Option", [pair[0] for pair in games])
+        self._config.game = games[engine][1]()
+        
