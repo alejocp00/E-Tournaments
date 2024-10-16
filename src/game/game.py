@@ -68,3 +68,6 @@ class Game(ABC):
     @abstractmethod
     def get_all_data_as_string():
         raise NotImplementedError
+
+    def __str__(self) -> str:
+        return self._game_name
