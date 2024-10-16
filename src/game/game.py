@@ -28,6 +28,10 @@ class Game(ABC):
     def game_state(self) -> GameState:
         return self._game_state
 
+    @property
+    def game_id(self) -> int:
+        return self._id
+
     def clone(self):
         return self.__class__(self._game_name)
 
@@ -59,7 +63,7 @@ class Game(ABC):
         return self
 
     @abstractmethod
-    def __next__(self):
+    def __next__(self)->Action:
         """
         Main game loop made it as an iterable
         """

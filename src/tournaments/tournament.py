@@ -52,7 +52,7 @@ class Tournament:
     def __iter__(self):
         return self
 
-    def __next__(self):
+    def __next__(self)->Game:
         return self._tournament_engine.next_match(self)
 
     def is_valid_configuration(self):
