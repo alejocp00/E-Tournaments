@@ -39,24 +39,6 @@ class CLI:
             # Print Tournament
             self.print_tournament()
 
-            # Check if all settings are set
-            if self._config.is_valid_configuration() and not self._change_settings:
-                self._change_settings = False
-                message = (
-                    Fore.GREEN
-                    + "All settings are set. Did you want to start the tournament or change some settings? "
-                    + Fore.RESET
-                )
-                options = ["Start Tournament", "Change Settings"]
-                selected_option = self.option_selector(
-                    message, "Invalid Option", options)
-
-                if options[selected_option] == "Start Tournament":
-                    self._config.start_tournament()  # Todo: Who starts the tournament?
-                elif options[selected_option] == "Change Settings":
-                    self._change_settings = True
-                    self.select_configuration()
-
             # Showing Menu
             options = ["Players","Game","Tournament","Exit"]
 
