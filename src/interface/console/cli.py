@@ -12,9 +12,9 @@ class CLI:
         # TODO: Poblar constructor
 
     def print_players(self) -> str:
-        if self._config.players_in_game is not None and len(self._config.players_in_game) > 0:
+        if self._config.players_in_tournament is not None and len(self._config.players_in_tournament) > 0:
             self._state_text += Fore.GREEN + "Players: " + Fore.RESET + "\n"
-            for player in self._config.players_in_game:
+            for player in self._config.players_in_tournament:
                 self._state_text += "\t" + str(player) +"\n"
 
     def print_game(self) -> str:
@@ -165,7 +165,7 @@ class CLI:
 
             one_more = self.option_selector("One more player?: ","Invalid Option", ["Yes","No"]) == 0
 
-        self._config.players_in_game = players
+        self._config.players_in_tournament = players
 
     def set_game(self):
         from src.core.importers import get_all_implementations_of, ImplementationsTypes

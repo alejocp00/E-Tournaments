@@ -6,23 +6,23 @@ from src.player.player_engine import PlayerEngine
 
 class Config:
     def __init__(self):
-        self._players_in_game : list[Player] = []
+        self._players_in_tournament : list[Player] = []
         self._tournament_engine : TournamentEngine | None = None
         self._game : Game | None = None
         self._already_set_players_in_game = False
         self._last_id_given = -1
         
     @property
-    def players_in_game(self):
-        return self._players_in_game
+    def players_in_tournament(self):
+        return self._players_in_tournament
     
-    @players_in_game.setter
-    def players_in_game(self, players_in_game : list[Player]):
-        self._players_in_game = players_in_game
-        self._already_set_players_in_game = self._players_in_game is not None and len(self._players_in_game) > 0
+    @players_in_tournament.setter
+    def players_in_tournament(self, players_in_game : list[Player]):
+        self._players_in_tournament = players_in_game
+        self._already_set_players_in_game = self._players_in_tournament is not None and len(self._players_in_tournament) > 0
 
     def add_player(self, player : Player):
-        self._players_in_game.append(player)
+        self._players_in_tournament.append(player)
 
     @property
     def tournament_engine(self):
