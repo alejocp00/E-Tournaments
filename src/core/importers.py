@@ -48,10 +48,7 @@ def get_all_implementations_of(selector: ImplementationsTypes) -> list:
                 classes = inspect.getmembers(module, inspect.isclass)
 
                 for name, engine in classes:
-                    if inspect.isclass(engine) and (
-                        issubclass(engine, TournamentEngine)
-                        or issubclass(engine, PlayerEngine or issubclass(engine, Game))
-                    ) and engine != TournamentEngine and engine != PlayerEngine and engine != Game:
+                    if inspect.isclass(engine) and (issubclass(engine, TournamentEngine) or issubclass(engine, PlayerEngine) or issubclass(engine, Game)) and engine != TournamentEngine and engine != PlayerEngine and engine != Game:
                         engines.append((name,engine))
 
     return engines

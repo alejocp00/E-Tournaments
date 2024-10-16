@@ -1,11 +1,6 @@
-from src.game.action import Action
-from src.game.game_state import GameState
-from src.player.player import Player
 from src.game.game import Game
 from implementations.game_engines.tick_tack_toe.src.utils import Tokens
-from implementations.game_engines.tick_tack_toe.src.ttt_game_state import (
-    TickTackToeGameState,
-)
+import implementations.game_engines.tick_tack_toe.src.ttt_game_state as TickTackToeGameState
 
 
 class TickTackToeGame(Game):
@@ -13,12 +8,12 @@ class TickTackToeGame(Game):
         super().__init__("TickTackToe")
 
     def init_game_state(self):
-        self._game_state = TickTackToeGameState(self.players, self.game_explorer)
+        self._game_state = TickTackToeGameState.TTTGameState(self.players, self.game_explorer)
 
-    def game_state(self) -> GameState:
+    def game_state(self) -> TickTackToeGameState.GameState:
         return self._game_state
 
-    def get_winner(self) -> Player | None:
+    def get_winner(self) -> TickTackToeGameState.Player | None:
         board = self.game_state.board
 
         for i in range(3):
@@ -35,9 +30,9 @@ class TickTackToeGame(Game):
         return None
 
     def __next__(self):
-        if self._game_state.state == GameState.IDLE:
-            self._game_state.state = GameState.IN_PROGRESS
-        if self._game_state.state == GameState.FINISHED:
+        if self._game_state.state == TickTackToeGame.IDLE:
+            self._game_state.state = TickTackToeGame.IN_PROGRESS
+        if self._game_state.state == TickTackToeGame.FINISHED:
             raise StopIteration
 
         current_player = self._game_state.get_next_player()
@@ -52,7 +47,7 @@ class TickTackToeGame(Game):
 
         return action
 
-    def perform_a_move(self, action: Action):
+    def perform_a_move(self, action: TickTackToeGameState.Action):
         token = action.action["token"]
         x = action.action["i"]
         y = action.action["j"]
