@@ -21,6 +21,10 @@ class Tournament:
     def players(self) -> list[Player]:
         return self._players
 
+    @players.setter
+    def players(self, players):
+        self._players = players
+
     @property
     def tournament_type(self):
         return self._tournament_engine.tournament_type
