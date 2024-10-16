@@ -1,10 +1,12 @@
 from src.core.configuration import Config
+from src.core.core_engine import CoreEngine
 from colorama import Cursor, Fore, Back, Style
 from os import system
 
 class CLI:
     def __init__(self) -> None:
         self._config = Config()
+        self._core_engine = CoreEngine(self._config)
         self._state_text = ""
         self._change_settings = False
         # TODO: Poblar constructor
@@ -81,7 +83,7 @@ class CLI:
             elif "tournament" in options[selected_option].lower():
                 self.set_tournament_engine()
             elif "start" in options[selected_option].lower():
-                self._config.start_tournament() # Todo: Who starts the tournament?
+                self._core_engine.start_tournament()
             elif "exit" in options[selected_option].lower():
                 return
 
