@@ -21,3 +21,6 @@ class TournamentEngine(ABC):
     @abstractmethod
     def is_valid_configuration(self, players: int):
         raise NotImplementedError
+
+    def __str__(self) -> str:
+        return self._tournament_type
