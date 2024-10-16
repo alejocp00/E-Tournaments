@@ -16,13 +16,18 @@ class DirectElimination(TournamentEngine):
         self._matches_to_perform = []
         self._idle_count = -1
         self._eliminated_count = 0
+        self._engine_initialized = False
 
     def init_state(self, tournament: Tournament):
         self._players = tournament.players
         self._players_state = [DirectElimination.PLAYER_IDLE] * len(self._players)
         self._idle_count = len(self._players)
+        self._engine_initialized = True
 
     def next_match(self, tournament: Tournament):
+
+        if not self._engine_initialized:
+            self.init_state(tournament)
 
         self.__process_results(tournament)
 
