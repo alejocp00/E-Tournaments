@@ -5,20 +5,58 @@ from os import system
 class CLI:
     def __init__(self) -> None:
         self._config = Config()
+        self._state_text = ""
+        self._change_settings = False
         # TODO: Poblar constructor
+
+    def print_players(self) -> str:
+        if self._config.players_in_game is not None and len(self._config.players_in_game) > 0:
+            self._state_text += Fore.GREEN + "Players: " + Fore.RESET + "\n"
+            for player in self._config.players_in_game:
+                self._state_text += "\t" + str(player) +"\n"
+
+    def print_game(self) -> str:
+        if self._config.game is not None:
+            self._state_text += Fore.GREEN + "Game: " + Fore.RESET + "\n"
+            self._state_text += "\t" + str(self._config.game) + "\n"
+            
+    def print_tournament(self) -> str:
+        if self._config.tournament_engine is not None:
+            self._state_text += Fore.GREEN + "Tournament: " + Fore.RESET + "\n"
+            self._state_text += "\t" + str(self._config.tournament_engine) + "\n"
+            
 
     def select_configuration(self) -> None:
 
         while True:
-            # Todo: Show Actual settings
-
-            # Print Players
-            config_text = ""
-            if self._config.players_in_game is not None and len(self._config.players_in_game) > 0:
-                config_text += Fore.GREEN + "Players: " + Fore.RESET + "\n"
-                for player in self._config.players_in_game:
-                    config_text += "\t" + str(player) +"\n"
             
+            # Print Players
+            self.print_players()
+
+            # Print Game
+            self.print_game()
+
+            # Print Tournament
+            self.print_tournament()
+
+            # Check if all settings are set
+            if self._config.is_valid_configuration() and not self._change_settings:
+                self._change_settings = False
+                message = (
+                    Fore.GREEN
+                    + "All settings are set. Did you want to start the tournament or change some settings? "
+                    + Fore.RESET
+                )
+                options = ["Start Tournament", "Change Settings"]
+                selected_option = self.option_selector(
+                    message, "Invalid Option", options)
+
+                if options[selected_option] == "Start Tournament":
+                    self._config.start_tournament()  # Todo: Who starts the tournament?
+                elif options[selected_option] == "Change Settings":
+                    self._change_settings = True
+                    self.select_configuration()
+
             # Showing Menu
             options = ["Players","Game","Tournament","Exit"]
 
@@ -49,7 +87,9 @@ class CLI:
                 options.append("Exit")
 
             # Get input from user
-            selected_option = self.option_selector("Select Option: ","Invalid Option", options, config_text)
+            selected_option = self.option_selector("Select Option: ","Invalid Option", options)
+
+            self._state_text = ""
 
             # Select option
             if "player" in options[selected_option].lower():
@@ -57,28 +97,16 @@ class CLI:
             elif "game" in options[selected_option].lower():
                 self.set_game()
             elif "tournament" in options[selected_option].lower():
-                self._config.set_tournament_engine()
+                self.set_tournament_engine()
             elif "start" in options[selected_option].lower():
                 self._config.start_tournament() # Todo: Who starts the tournament?
             elif "exit" in options[selected_option].lower():
                 return
 
-            # Check if all settings are set
-            if self._config.is_valid_configuration():
-                message = "" # Todo: Show Actual settings
-                message += Fore.GREEN + "All settings are set. Did you want to start the tournament or change some settings?" + Fore.RESET
-                options = ["Start Tournament","Change Settings"]
-                selected_option = self.option_selector(message,"Invalid Option", options)
-
-                if options[selected_option] == "Start Tournament":
-                    self._config.start_tournament() # Todo: Who starts the tournament?
-                elif options[selected_option] == "Change Settings":
-                    self.select_configuration()
-
     def _clear_console(self) -> None:
         system("cls||clear")
-        
-    def option_selector(self,initial_prompt,error_message:str,options:list[str],prev_text:str = "",) -> int:
+
+    def option_selector(self,initial_prompt,error_message:str,options:list[str]) -> int:
         '''
         Selects an option from a list of options
         
@@ -107,8 +135,8 @@ class CLI:
             # Clear the console
             self._clear_console()
 
-            print(prev_text)
-    
+            print(self._state_text)
+
             # Show options
             for i in range(len(options)):
                 print(Fore.BLUE + str(i+1)+". " + Fore.RESET + options[i])
@@ -150,17 +178,23 @@ class CLI:
             name_of_player = input("Insert the name of player {}: ".format(len(players)+1))
             engine = self.option_selector("Select Player Engine: ","Invalid Option", [pair[0] for pair in engines])
             players.append(Player(name_of_player, engines[engine][1](),self._config.get_id_for_new_player()))
-            
+
             one_more = self.option_selector("One more player?: ","Invalid Option", ["Yes","No"]) == 0
-            
+
         self._config.players_in_game = players
 
     def set_game(self):
         from src.core.importers import get_all_implementations_of, ImplementationsTypes
         from src.game.game import Game
 
-        # Get number of players
         games = get_all_implementations_of(ImplementationsTypes.Game)
         engine = self.option_selector("Select Game: ","Invalid Option", [pair[0] for pair in games])
         self._config.game = games[engine][1]()
-        
+
+    def set_tournament_engine(self):
+        from src.core.importers import get_all_implementations_of, ImplementationsTypes
+        from src.tournaments.tournament_engine import TournamentEngine
+
+        engines = get_all_implementations_of(ImplementationsTypes.Tournament)
+        engine = self.option_selector("Select Tournament Engine: ","Invalid Option", [pair[0] for pair in engines])
+        self._config.tournament_engine = engines[engine][1]()
