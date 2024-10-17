@@ -5,4 +5,5 @@ class Action:
         self.action = action
 
     def __str__(self):
-        text = f"Player {self.player_id} ({self.player_name}) performs {self.action}"
+        text = f"Player {self.player_id} ({self.player_name}) performs: {self.action}"
+        return text
