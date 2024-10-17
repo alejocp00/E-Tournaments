@@ -84,6 +84,7 @@ class CLI:
                 self.set_tournament_engine()
             elif "start" in options[selected_option].lower():
                 self._core_engine.start_tournament()
+                input("Press Enter to restart...")
             elif "exit" in options[selected_option].lower():
                 return
 
