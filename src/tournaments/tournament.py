@@ -57,7 +57,12 @@ class Tournament:
         return self
 
     def __next__(self)->Game:
-        return self._tournament_engine.next_match(self)
+        match = self._tournament_engine.next_match(self)
+        self.put_match_result(match)
+        return match
 
     def is_valid_configuration(self):
         return self._tournament_engine.is_valid_configuration(self._players.count())
+
+    def get_winner(self):
+        return self._tournament_engine.get_winner(self)
