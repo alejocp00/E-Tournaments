@@ -1,4 +1,4 @@
 class Tokens:
-    PLAYER_1_TOKEN = "O"
-    PLAYER_2_TOKEN = "X"
+    PLAYER_0_TOKEN = "O"
+    PLAYER_1_TOKEN = "X"
     EMPTY_TOKEN = " "
