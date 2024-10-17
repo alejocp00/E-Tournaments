@@ -31,6 +31,10 @@ class GameState:
     def current_player_index(self):
         return self._current_player_index
 
+    @current_player_index.setter
+    def current_player_index(self, current_player_index):
+        self._current_player_index = current_player_index
+
     @property
     def current_player(self):
         return self._players[self.current_player_index]
