@@ -14,7 +14,7 @@ class Game(ABC):
 
     @property
     def game_name(self):
-        return self.game_name
+        return self._game_name
 
     @property
     def players(self):
@@ -33,7 +33,7 @@ class Game(ABC):
         return self._id
 
     def clone(self):
-        return self.__class__(self._game_name)
+        return self.__class__()
 
     def set_game_id(self, id: int):
         self._id = id
@@ -44,7 +44,7 @@ class Game(ABC):
     def remove_player(self, player: Player):
         self._players.remove(player)
 
-    def add_player(self, player: list[Player]):
+    def add_players(self, player: list[Player]):
         self._players.extend(player)
 
     @abstractmethod
