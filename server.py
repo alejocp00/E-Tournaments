@@ -5,7 +5,7 @@ import struct
 import threading
 import pickle
 import time
-from conexiones.lib.protocols import *
+from conexiones.lib.protocol import *
 from conexiones.lib.socket_thread import socket_thread
 from src.tournaments.tournament_server import tournament_server
 import logging
