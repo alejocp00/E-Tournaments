@@ -10,4 +10,4 @@ class AllGamesRandomPlayer(PlayerEngine):
         super().__init__("All Games Random Player")
 
     def get_next_action(self, game_state: GameState) -> Action:
-        return random(game_state.get_all_moves())
+        return random.choice(game_state.get_all_moves())
