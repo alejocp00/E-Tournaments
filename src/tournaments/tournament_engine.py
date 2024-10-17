@@ -22,5 +22,9 @@ class TournamentEngine(ABC):
     def is_valid_configuration(self, players: int):
         raise NotImplementedError
 
+    @abstractmethod
+    def get_winner(self, tournament):
+        raise NotImplementedError
+
     def __str__(self) -> str:
         return self._tournament_type
