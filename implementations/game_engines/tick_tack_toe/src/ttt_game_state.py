@@ -15,9 +15,9 @@ class TTTGameState(GameState):
 
     def get_all_moves(self) -> list[Action]:
         player_token = (
-            Tokens.PLAYER_1_TOKEN
+            Tokens.PLAYER_0_TOKEN
             if self.current_player_index == 0
-            else Tokens.PLAYER_2_TOKEN
+            else Tokens.PLAYER_1_TOKEN
         )
 
         moves = []
