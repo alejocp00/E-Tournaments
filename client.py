@@ -1,4 +1,4 @@
-from conexiones.lib.protocols import *
+from conexiones.lib.protocol import *
 from src.tournaments.tournament import *
 from implementations.game_engines.tick_tack_toe.src.ttt_game_state import *
 from implementations.player_engines.all_games_random_player.all_games_random_player import *
@@ -52,6 +52,7 @@ def main():
                 plays = []
                 plays_rlock = threading.RLock()
                 start_game = sg()
+                
                 tournaments = create_games()       
                 start_game.games = tournaments
                 start_game.ip = socket.gethostbyname(socket.gethostname())
@@ -70,7 +71,6 @@ def main():
             receiver(data)
         except socket.error as e:
             print(f'Error send/recv x multicast {e.errno}') 
-
 
 def sendrecv_multicast():
     try:
@@ -250,5 +250,3 @@ def create_games():
         tournament_instance = DirectElimination(player_list, initial_state,  game_instance)
 
         return tournament_instance
-
-main()
