@@ -9,13 +9,14 @@ class TournamentEngine(ABC):
 
     def __init__(self, tournament_type: str):
         self._tournament_type = tournament_type
+        self._matches_to_perform = []
 
     @property
     def tournament_type(self):
         return self._tournament_type
 
     @abstractmethod
-    def next_match(self, tournament):
+    def next_matches(self, tournament):
         raise NotImplementedError
 
     @abstractmethod
