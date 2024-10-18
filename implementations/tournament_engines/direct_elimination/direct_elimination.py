@@ -13,7 +13,6 @@ class DirectElimination(TournamentEngine):
         super().__init__("Direct Elimination")
         self._players = []
         self._players_state = []
-        self._matches_to_perform = []
         self._idle_count = -1
         self._eliminated_count = 0
         self._engine_initialized = False
@@ -47,8 +46,7 @@ class DirectElimination(TournamentEngine):
                 game.add_player(self._players[i])
             self._matches_to_perform.append(game)
 
-        for match in self._matches_to_perform:
-            return match
+        return self._matches_to_perform
 
     def is_valid_configuration(self, players: int):
         return players > 2

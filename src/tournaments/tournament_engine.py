@@ -9,6 +9,7 @@ class TournamentEngine(ABC):
 
     def __init__(self, tournament_type: str):
         self._tournament_type = tournament_type
+        self._matches_to_perform = []
 
     @property
     def tournament_type(self):
