@@ -79,3 +79,6 @@ class TickTackToeGame(Game):
             text += str(action) + "\n"
 
         return text
+    
+    def copy(self):
+        return TickTackToeGame()

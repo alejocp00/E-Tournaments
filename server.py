@@ -188,7 +188,7 @@ class server:
                 thread_rec.start()
                 show_thread = threading.Thread(target=self.update_play_clients,name='update_play_clients')
                 show_thread.start()
-                print('SERVER LEADER!!!')
+                print('SERVER LEADER')
                 
         else:
             if  self.leader not in self.connections_in:
@@ -734,8 +734,15 @@ class server:
                                 self.tnmt_per_client[ip] = tournament_server() 
                                 self.tnmt_per_client[ip].tournament = sms.games
                                 matches = []
+                                matchs = []
                                 for match in self.tnmt_per_client[ip].tournament:
-                                    matches.append(match)
+                                    matchs = match
+                                    break
+                                k= 0
+                                for i in range(len(matchs)):
+                                    r = matchs[i]
+                                    matches.append([r, k])
+                                    k +=2
                                 games = matches
                                 self.tnmt_per_client[ip].plays = len(games)
                                 self.tnmt_per_client[ip].round.games = games.copy()
@@ -1076,11 +1083,11 @@ class server:
     
     def start_game(self, game, client_ip, game_id):        
         logging.warning(f'*****Voy a empezar a jugar cliente {client_ip} j1:{game._players[0].name}, j2:{game._players[1].name}')
-        game.initialize()
-        while not game._end and game.winner == '': 
-            game._excecute_turn()
-            if(len(game._current_play)):
-                x = game._current_play[-1]                
+        game.init_game_state()
+        while game._winner == None: 
+            game.__next__()
+            if(len(game._log)):
+                x = game._log[-1]                
                 cpy = game.copy()
                 play = [x, client_ip, game_id, cpy]
                 self.gr_rlock.acquire()
@@ -1091,11 +1098,11 @@ class server:
                     self.send_leader.append(play) #protocolo para la replica
                     self.send_leader_rlock.release()
                     #logging.warning(f'guarde en send leader del client_ip {client_ip} j1:{x[0][0].name} j2:{x[0][1].name} Jugada: {x[1:]} sender_leader_count={self.send_leader_count} len send server={len(self.send_leader)}')
-                logging.warning(f'ejecute turno en ip={client_ip} j1:{x[0][0].name} j2:{x[0][1].name} y la jug: {x[1:]} si leader:{self.leader} send_leader_count={self.send_leader_count}') #tiene la ultima jugada
+                #logging.warning(f'ejecute turno en ip={client_ip} j1:{x[0][0].name} j2:{x[0][1].name} y la jug: {x[1:]} si leader:{self.leader} send_leader_count={self.send_leader_count}') #tiene la ultima jugada
                 time.sleep(0.5)
-        if(game._end or game.winner != ''):
-            print(f'Juego terminado gano: {game.winner} entre   jugador1={game._players[0].name}, jugador2={game._players[1].name}')
-            logging.warning(f'Juego terminado gano: {game.winner}  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
+        if( game._winner != ''):
+            print(f'Juego terminado gano: {game._winner} entre   jugador1={game._players[0].name}, jugador2={game._players[1].name}')
+            logging.warning(f'Juego terminado gano: {game._winner}  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
         self.game_threads.pop(0)
         
     def restart_tnmt(self):
@@ -1317,6 +1324,8 @@ class server:
             b = len(game_list)
             logging.warning(f'juegos incompletos hice distribute dentro de incompleta {b}')
             self.distribute_games(game_list, ip,len(self.game_threads))
+
+
 
 def main():
     logging.basicConfig(filename='server.log', filemode='w', format='%(asctime)s - %(message)s')#, filemode='w', format='%(message)s')
