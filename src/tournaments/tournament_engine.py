@@ -16,7 +16,7 @@ class TournamentEngine(ABC):
         return self._tournament_type
 
     @abstractmethod
-    def next_match(self, tournament):
+    def next_matches(self, tournament):
         raise NotImplementedError
 
     @abstractmethod

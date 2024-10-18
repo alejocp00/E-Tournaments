@@ -57,7 +57,7 @@ class Tournament:
         return self
 
     def __next__(self)->list[Game]:
-        match = self._tournament_engine.next_match(self)
+        match = self._tournament_engine.next_matches(self)
         self.put_match_result(match)
         return match
 
