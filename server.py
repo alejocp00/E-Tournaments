@@ -730,10 +730,13 @@ class server:
                                     self.play_clients[ip]=[]
                                     self.pr[ip] = []
                                     self.ps[ip] = ps()                                    
-                                
+                               
                                 self.tnmt_per_client[ip] = tournament_server() 
                                 self.tnmt_per_client[ip].tournament = sms.games
-                                games = self.tnmt_per_client[ip].tournament.create_matching()
+                                matches = []
+                                for match in self.tnmt_per_client[ip].tournament:
+                                    matches.append(match)
+                                games = matches
                                 self.tnmt_per_client[ip].plays = len(games)
                                 self.tnmt_per_client[ip].round.games = games.copy()
                                 logging.warning(f'DDDDDDDDDDDDDDDevuelto de matching ip={ip} self.tnmt_per_client[ip].plays={self.tnmt_per_client[ip].plays} juegos')
@@ -821,7 +824,7 @@ class server:
             pass
         #print(f'en recv sali de {ip}')
         if ip in self.connections_in: #se pregunta pq puede que haya entrado un mensaje antes de active false y el pop se hizo alante
-            sock.close()
+            self.sock.close()
         logging.warning(f'en receiver. Deje de recibir de {ip}')
     
     def connect_to(self, ip):

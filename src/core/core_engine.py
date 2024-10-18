@@ -164,11 +164,11 @@ class CoreEngine():
                             self.plays = []
                             self.plays_rlock = threading.RLock()
                             start_game = sg()
-                            tournaments = create_games()       
-                            start_game.games = tournaments
+#                            tournaments = create_games()       
+#                            start_game.games = tournaments
                             start_game.ip = socket.gethostbyname(socket.gethostname())
                             data = pickle.dumps(start_game)
-                            sock.send(data)
+                            self.sock.send(data)
                         else:
                             os._exit(0)
                 else:
@@ -195,7 +195,7 @@ class CoreEngine():
                     sms = pickle.loads(data)                    
                     if(type(sms) == sgc):
                         try:
-                            sock.send(tnmt)
+                            self.sock.send(tnmt)
                             os.system('cls')
                             print('Estoy enviando nuevamente el torneo')
                         except socket.error as e:
@@ -222,8 +222,8 @@ class CoreEngine():
                 continue_game.continue_game = True
                 print('Trying to connect a new server')
                 while True:
-                    self.sock, _ = sendrecv_multicast()
-                    if(self.sock != None and sock != -1):
+                    self.sock, _ = self.sendrecv_multicast()
+                    if(self.sock != None and self.sock != -1):
                         sms = pickle.dumps(continue_game)
                         try:
                             self.sock.send(sms)
