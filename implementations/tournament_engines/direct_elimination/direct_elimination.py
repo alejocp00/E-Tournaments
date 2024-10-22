@@ -73,7 +73,7 @@ class DirectElimination(TournamentEngine):
 
         for rounds_results in results:
             for result in rounds_results:
-                winner = result.get_winner()
+                _,winner = result.get_winner()
                 players = result.players
                 for player in players:
                     index = self._players.index(player)
