@@ -67,8 +67,3 @@ class ps: #package sent to client
     def __init__(self) -> None:
         self.id = 0
         self.list = []
-
-class socket_thread:
-    def __init__(self, sock, active):
-        self.sock = sock
-        self.active = active
