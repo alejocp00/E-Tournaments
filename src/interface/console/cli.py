@@ -9,8 +9,7 @@ class CLI:
         self._core_engine = CoreEngine(self._config)
         self._state_text = ""
         self._change_settings = False
-        # TODO: Poblar constructor
-
+        
     def print_players(self) -> str:
         if self._config.players_in_tournament is not None and len(self._config.players_in_tournament) > 0:
             self._state_text += Fore.GREEN + "Players: " + Fore.RESET + "\n"

@@ -848,7 +848,7 @@ class server:
                 logging.warning(f'en conect_to connect_out es {self.connections_out}')
             return res
         except socket.error as e:
-            print (f'en connect_to error: {e.errno}')
+            print (f'en connect_to error - {e.errno}')
             return e.errno
 
     def send_client(self, ip):
@@ -985,8 +985,8 @@ class server:
             self.play_clients[ip].append(send_play)
             self.tnmt_per_client[ip].round.time = 0
             
-            logging.warning(f'++++++ set_play_clients anadido {send_play[3].players} al cliente {ip}, J1:{send_play[3].players[0].name} J2:{send_play[3].players[1].name} jugada={send_play[0]} sender_leader_count={self.send_leader_count} {ip in self.play_clients}')
-            if not send_play[3].get_winner() == None:
+            logging.warning(f'++++++ set_play_clients añadido {send_play[3].players} al cliente {ip}, J1:{send_play[3].players[0].name} J2:{send_play[3].players[1].name} jugada={send_play[0]} sender_leader_count={self.send_leader_count} {ip in self.play_clients}')
+            if send_play[3].get_winner() is not None:
              #       send_play[0][0][send_play[0][1]].points += 1
                     self.tnmt_per_client[ip].round.winners.append([send_play[3].get_winner(),[send_play[3].players[0].name, send_play[3].players[1].name]])
                     total_winners = len(self.tnmt_per_client[ip].round.winners)
