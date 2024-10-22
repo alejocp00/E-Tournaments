@@ -2,7 +2,6 @@ from src.game.game import Game
 from implementations.game_engines.tick_tack_toe.src.utils import Tokens
 import implementations.game_engines.tick_tack_toe.src.ttt_game_state as TickTackToeGameState
 
-
 class TickTackToeGame(Game):
     def __init__(self):
         super().__init__("TickTackToe")
@@ -20,6 +19,10 @@ class TickTackToeGame(Game):
             return self._winner
         
         board = self._game_state.board
+        
+        if self._turn == 9:
+            self._winner = "empate"
+            return self._winner
 
         for i in range(3):
             if board[i][0] == board[i][1] == board[i][2] and board[i][0] != TickTackToeGameState.Tokens.EMPTY_TOKEN:
@@ -80,5 +83,3 @@ class TickTackToeGame(Game):
 
         return text
     
-    def copy(self):
-        return TickTackToeGame()

@@ -76,6 +76,3 @@ class Game(ABC):
     def __str__(self) -> str:
         return self._game_name
     
-    @abstractstaticmethod
-    def copy():
-        pass
