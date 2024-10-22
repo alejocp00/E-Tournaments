@@ -986,16 +986,17 @@ class server:
             self.tnmt_per_client[ip].round.time = 0
             
             logging.warning(f'++++++ set_play_clients añadido {send_play[3].players} al cliente {ip}, J1:{send_play[3].players[0].name} J2:{send_play[3].players[1].name} jugada={send_play[0]} sender_leader_count={self.send_leader_count} {ip in self.play_clients}')
-            if send_play[3].get_winner() is not None:
+            if send_play[3].get_winner()[0].name != 'Unfinished':
              #       send_play[0][0][send_play[0][1]].points += 1
+                    self.tnmt_per_client[ip].tournament.put_match_result(send_play[3])
                     self.tnmt_per_client[ip].round.winners.append([send_play[3].get_winner(),[send_play[3].players[0].name, send_play[3].players[1].name]])
                     total_winners = len(self.tnmt_per_client[ip].round.winners)
                     winners = ''
                     for i in self.tnmt_per_client[ip].round.winners:
-                        if i[0] == "empate":
+                        if i[0][0].name == 'Draw':
                             winners = winners + send_play[3].players[0].name + ', '
                         else:
-                            winners = winners +  i[0].name  + ', '
+                            winners = winners +  i[0][1].name  + ', '
                     if( total_winners == self.tnmt_per_client[ip].plays):                        
                         logging.warning(f'++++++++++++self.winner, termino una vuelta  ganadores ')
 
@@ -1003,10 +1004,12 @@ class server:
                         #or not self.tnmt_per_client[ip].tournament.round:
                         #    if not self.tnmt_per_client[ip].tournament.round:
                         #        self.tnmt_per_client[ip].tournament.players = [k[0] for k in self.tnmt_per_client[ip].round.winners]
-                            r = self.tnmt_per_client[ip].tournament.get_winner()  
-                            win = winners[0]  
+                            for _ in self.tnmt_per_client[ip].tournament:
+                                if self.tnmt_per_client[ip].tournament.get_winner() is not None:
+                                    break
+                            win = self.tnmt_per_client[ip].tournament.get_winner()  
                             logging.warning(f'set play WINNER --->  {win}  cliente {ip} ')
-                            self.play_clients[ip].append('WINNER --->  ' + win)
+                            self.play_clients[ip].append('WINNER --->  ' + win.name)
                             return 1
                         else:
                             self.tnmt_per_client[ip].tournament.players = [k[0] for k in self.tnmt_per_client[ip].round.winners]
@@ -1100,7 +1103,7 @@ class server:
     def start_game(self, game, client_ip, game_id):        
         logging.warning(f'*****Voy a empezar a jugar cliente {client_ip} j1:{game._players[0].name}, j2:{game._players[1].name}')
         game.init_game_state()
-        while game.get_winner() is None: 
+        while game.get_winner()[0].name == 'Unfinished': 
             game.__next__()
             if(len(game._log)):
                 x = game._log[-1]                
@@ -1116,9 +1119,11 @@ class server:
                     #logging.warning(f'guarde en send leader del client_ip {client_ip} j1:{x[0][0].name} j2:{x[0][1].name} Jugada: {x[1:]} sender_leader_count={self.send_leader_count} len send server={len(self.send_leader)}')
                 #logging.warning(f'ejecute turno en ip={client_ip} j1:{x[0][0].name} j2:{x[0][1].name} y la jug: {x[1:]} si leader:{self.leader} send_leader_count={self.send_leader_count}') #tiene la ultima jugada
                 time.sleep(0.5)
-        if( game._winner != ''):
-            print(f'Juego terminado gano: {game._winner} entre   jugador1={game._players[0].name}, jugador2={game._players[1].name}')
+        if game.get_winner()[1] is not None:
+            print(f'Juego terminado gano: {game._winner} entre  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
             logging.warning(f'Juego terminado gano: {game._winner}  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
+        else :
+            print(f'Juego empatado  entre  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
         self.game_threads.pop(0)
         
     def restart_tnmt(self):

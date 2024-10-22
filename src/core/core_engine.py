@@ -75,6 +75,19 @@ class CoreEngine():
         start_game.ip = socket.gethostbyname(socket.gethostname())
         data = pickle.dumps(start_game)
         
+           
+#        for match in tournament:
+#            print(match)
+#            for action in match:
+#                # self._log[tournament.id][match.game_id] = action
+#                print(action)
+#                for a in action:
+#                    print(a)
+
+        
+#        print(f"The Winner is: {tournament.get_winner()}")
+        
+        
 
     
     #arreglar comunicacion con el servidor para que ejecute torneo
@@ -88,16 +101,7 @@ class CoreEngine():
             self.receiver(data)
         except socket.error as e:
             print(f'Error send/recv x multicast {e.errno}') 
-            
-        for match in tournament:
-            print(match)
-            for action in match:
-                # self._log[tournament.id][match.game_id] = action
-                print(action)
-
-        
-        print(f"The Winner is: {tournament.get_winner()}")
-        
+         
     def sendrecv_multicast(self):
         try:
             message = pickle.dumps(socket.gethostbyname(socket.gethostname()))
