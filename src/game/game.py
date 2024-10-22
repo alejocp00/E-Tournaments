@@ -1,4 +1,4 @@
-from abc import abstractmethod, ABC
+from abc import abstractmethod, ABC, abstractstaticmethod
 from src.game.action import Action
 from src.player.player import Player
 from src.game.game_state import GameState
@@ -75,3 +75,4 @@ class Game(ABC):
 
     def __str__(self) -> str:
         return self._game_name
+    
