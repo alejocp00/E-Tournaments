@@ -1,3 +1,4 @@
+import random
 from src.tournaments.tournament_engine import TournamentEngine
 from src.tournaments.tournament import Tournament
 
@@ -13,7 +14,6 @@ class DirectElimination(TournamentEngine):
         super().__init__("Direct Elimination")
         self._players = []
         self._players_state = []
-        self._idle_count = -1
         self._eliminated_count = 0
         self._engine_initialized = False
         self._winner = None
@@ -22,7 +22,6 @@ class DirectElimination(TournamentEngine):
     def init_state(self, tournament: Tournament):
         self._players = tournament.players
         self._players_state = [DirectElimination.PLAYER_IDLE] * len(self._players)
-        self._idle_count = len(self._players)
         self._engine_initialized = True
 
     def next_matches(self, tournament: Tournament):
@@ -52,18 +51,21 @@ class DirectElimination(TournamentEngine):
 
     def __create_pairs(self):
         pairs = []
-        remaining_idle = self._idle_count % 2 == 1
-        total_to_match = self._idle_count
+        matchable_players = [i for i,state in enumerate(self._players_state) if state == DirectElimination.PLAYER_IDLE]
+        total_to_match = len(matchable_players)
+        remaining_idle = total_to_match % 2 == 1
+        random.shuffle(matchable_players)
 
         for i in range(0, total_to_match, 2):
             if remaining_idle and i == total_to_match - 1:
                 break
+            p1 = matchable_players[i]
+            p2 = matchable_players[i+1]
+            
+            self._players_state[p1] = DirectElimination.PLAYER_PAIRED
+            self._players_state[p2] = DirectElimination.PLAYER_PAIRED
+            pairs.append([p1,p2])
 
-            self._players_state[i] = DirectElimination.PLAYER_PAIRED
-            self._players_state[i + 1] = DirectElimination.PLAYER_PAIRED
-            pairs.append([i, i + 1])
-
-        self._idle_count = int(remaining_idle)
         return pairs
 
     def __process_results(self, tournament: Tournament):
@@ -78,13 +80,11 @@ class DirectElimination(TournamentEngine):
                     if winner is not None:
                         if winner == player:
                             self._players_state[index] = DirectElimination.PLAYER_IDLE
-                            self._idle_count +=1
                         else:
                             self._players_state[index] = DirectElimination.PLAYER_ELIMINATED
                             self._eliminated_count += 1
                     else:
                         self._players_state[index] = DirectElimination.PLAYER_IDLE
-                        self._idle_count +=1
 
     def get_winner(self, tournament):
         if self._winner is not None:
