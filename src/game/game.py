@@ -1,8 +1,13 @@
 from abc import abstractmethod, ABC, abstractstaticmethod
+from enum import Enum
 from src.game.action import Action
 from src.player.player import Player
 from src.game.game_state import GameState
 
+class GameEndCondition(Enum):
+    Unfinished = 0
+    Victory = 1
+    Draw = 2
 
 class Game(ABC):
     def __init__(self, game_name: str):
@@ -52,7 +57,7 @@ class Game(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def get_winner(self) -> Player:
+    def get_winner(self) -> tuple[GameEndCondition,Player|None]:
         raise NotImplementedError
 
     @abstractmethod
