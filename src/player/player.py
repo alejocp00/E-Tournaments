@@ -95,3 +95,12 @@ class Player:
 
     def __str__(self):
         return self._name + ":" + str(self._id)
+    
+    def __eq__(self, value: object) -> bool:
+        return isinstance(value, Player) and self._id==value.id and self._name == value.name
+    
+    def __ne__(self, value: object) -> bool:
+        return not self.__eq__(value)
+        
+    def __hash__(self) -> int:
+        return hash(self._name+str(self._id))
