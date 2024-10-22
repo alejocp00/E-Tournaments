@@ -7,8 +7,8 @@ import pickle
 import time
 import logging
 import copy
-from conexiones.lib.protocol import *
-from conexiones.lib.socket_thread import socket_thread
+from conexiones.gestors.protocol import *
+from conexiones.gestors.socket_thread import socket_thread
 from src.tournaments.tournament_server import tournament_server
 
 PORT = 1111
@@ -1003,7 +1003,7 @@ class server:
                         #or not self.tnmt_per_client[ip].tournament.round:
                         #    if not self.tnmt_per_client[ip].tournament.round:
                         #        self.tnmt_per_client[ip].tournament.players = [k[0] for k in self.tnmt_per_client[ip].round.winners]
-                            #fix to self.tnmt_per_client[ip].tournament.get_winner()  
+                            r = self.tnmt_per_client[ip].tournament.get_winner()  
                             win = winners[0]  
                             logging.warning(f'set play WINNER --->  {win}  cliente {ip} ')
                             self.play_clients[ip].append('WINNER --->  ' + win)

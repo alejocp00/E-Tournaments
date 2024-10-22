@@ -1,6 +1,6 @@
 import src.core.configuration as cfg
 
-from conexiones.lib.protocol import *
+from conexiones.gestors.protocol import *
 import logging
 import struct
 import pickle
