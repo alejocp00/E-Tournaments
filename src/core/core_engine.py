@@ -18,6 +18,7 @@ class CoreEngine():
         self.sock = -1
         self.game_instance = None
         self.plays_rlock = threading.RLock()
+        self.new = False
         
         logging.basicConfig(filename='client.log', filemode='w', format='%(asctime)s - %(message)s')
         client_down = cd()
@@ -64,6 +65,8 @@ class CoreEngine():
 
     def start_tournament(self) -> None:
         # Todo: tomar el id del torneo de algún lugar
+        if self.new:
+            return -1
         
         playcount = 0
         start_game = sg()
@@ -166,11 +169,12 @@ class CoreEngine():
                                 break
                         # os.system('cls')
                         if(resp == 'y'):
-                            playcount = 0
                             self.plays = []
                             self.plays_rlock = threading.RLock()
                             start_game = sg()
-                            self.start_tournament()
+                            self.new = True
+                            return -1
+#                            self.start_tournament()
 #                            tournaments = create_games()       
 #                            start_game.games = tournaments
                             #start_game.ip = socket.gethostbyname(socket.gethostname())
@@ -183,7 +187,8 @@ class CoreEngine():
                     # game_instance._current_player_index = play[1]
                     # game_instance.config = play[3]
                     # game_instance.show_board()
-                    print(f'playcount={playcount} player jugando: {play[0].player_name} otro player: {play[3].players[1 if play[0].player_id == 0 else 0].name}, {play[0]}')
+                    print(f'jugada {playcount} : {play[0]}')
+                    #print(f'playcount={playcount} player jugando: {play[0].player_name} otro player: {play[3].players[1 if play[0].player_id == 0 else 0].name}, {play[0]}')
                     #logging.warning(f'playcount={playcount} player1: {play[0][0].name} player2: {play[0][1].name}, {play[1:]}')
                 playcount+=1  
                 time.sleep(0.5)

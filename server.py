@@ -1005,17 +1005,20 @@ class server:
                         #    if not self.tnmt_per_client[ip].tournament.round:
                         #        self.tnmt_per_client[ip].tournament.players = [k[0] for k in self.tnmt_per_client[ip].round.winners]
                             for _ in self.tnmt_per_client[ip].tournament:
-                                if self.tnmt_per_client[ip].tournament.get_winner() is not None:
-                                    break
+                                continue            
                             win = self.tnmt_per_client[ip].tournament.get_winner()  
+                            
                             logging.warning(f'set play WINNER --->  {win}  cliente {ip} ')
+                            if win.name is None:
+                                win =  win[1][0]
                             self.play_clients[ip].append('WINNER --->  ' + win.name)
                             return 1
                         else:
                             self.tnmt_per_client[ip].tournament.players = [k[0] for k in self.tnmt_per_client[ip].round.winners]
                             winners = ''
                             for i in self.tnmt_per_client[ip].tournament.players:
-                                winners = winners +  i.name  + ', '
+                                
+                                winners = winners +  i[1].name  + ', '
                             self.play_clients[ip].append('ROUND FINISHED, ganadores ' + winners)
 
                             logging.warning(f'ROUND FINISHED, ganadores {winners} self.send.count={self.send_leader_count} len self.send..count={len(self.send_leader)} ')
@@ -1120,8 +1123,8 @@ class server:
                 #logging.warning(f'ejecute turno en ip={client_ip} j1:{x[0][0].name} j2:{x[0][1].name} y la jug: {x[1:]} si leader:{self.leader} send_leader_count={self.send_leader_count}') #tiene la ultima jugada
                 time.sleep(0.5)
         if game.get_winner()[1] is not None:
-            print(f'Juego terminado gano: {game._winner} entre  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
-            logging.warning(f'Juego terminado gano: {game._winner}  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
+            print(f'Juego terminado gano: {game.get_winner()[1]} entre  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
+            logging.warning(f'Juego terminado gano: {game.get_winner()[1]}  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
         else :
             print(f'Juego empatado  entre  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
         self.game_threads.pop(0)
