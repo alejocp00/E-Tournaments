@@ -75,6 +75,15 @@ class Game(ABC):
         raise NotImplementedError
 
     @abstractmethod
+    def solve_draw(self)->None:
+        """Get a winner in case of draw
+
+        Raises:
+            NotImplementedError: Not implemented in the child class
+        """
+        raise NotImplementedError
+
+    @abstractmethod
     def get_all_data_as_string():
         raise NotImplementedError
 

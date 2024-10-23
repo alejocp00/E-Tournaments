@@ -1,3 +1,4 @@
+import random
 from src.game.game import Game, GameEndCondition
 from implementations.game_engines.tick_tack_toe.src.utils import Tokens
 import implementations.game_engines.tick_tack_toe.src.ttt_game_state as TickTackToeGameState
@@ -82,3 +83,18 @@ class TickTackToeGame(Game):
             text += str(action) + "\n"
 
         return text
+
+    def solve_draw(self) -> None:
+        p0 = 0
+        p1 = 0
+        
+        choices = [1,2]
+        
+        for i in range(3):
+            choice = random.choice(choices)
+            if choice == 1:
+                p0+=1
+            else:
+                p1+=1
+        
+        self._winner = self._players[0] if p0>p1 else self._players[1]
