@@ -10,7 +10,6 @@ import copy
 from conexiones.gestors.protocol import *
 from conexiones.gestors.socket_thread import socket_thread
 from src.tournaments.tournament_server import tournament_server
-from src.game.game import GameEndCondition
 
 PORT = 1111
 PORTCLIENT = 1112
@@ -995,15 +994,11 @@ class server:
                     winners = ''
                     for i in self.tnmt_per_client[ip].round.winners:
                         if i[0][0].name == 'Draw':
-                            winners = winners + send_play[3].players[0].name + ', '
-                        else:
-                            winners = winners +  i[0][1].name  + ', '
+                            send_play[3].solve_draw()
+                            i[0] = send_play[3].get_winner()
+                        winners = winners +  i[0][1].name  + ', '
                     if( total_winners == self.tnmt_per_client[ip].plays):                        
                         logging.warning(f'++++++++++++self.winner, termino una vuelta  ganadores ')
-
-                        condition,_ = send_play[3].get_winner()
-                        if condition == GameEndCondition.Draw:
-                            send_play[3].solve_draw()
 
                         if total_winners==1:
                         #or not self.tnmt_per_client[ip].tournament.round:
@@ -1019,11 +1014,11 @@ class server:
                             self.play_clients[ip].append('WINNER --->  ' + win.name)
                             return 1
                         else:
-                            self.tnmt_per_client[ip].tournament.players = [k[0] for k in self.tnmt_per_client[ip].round.winners]
-                            winners = ''
-                            for i in self.tnmt_per_client[ip].tournament.players:
-                                
-                                winners = winners +  i[1].name  + ', '
+                            #self.tnmt_per_client[ip].tournament.players = [k[0] for k in self.tnmt_per_client[ip].round.winners]
+                            #winners = ''
+                            #for i in self.tnmt_per_client[ip].tournament.players:
+                            #    
+                            #    winners = winners +  i[1].name  + ', '
                             self.play_clients[ip].append('ROUND FINISHED, ganadores ' + winners)
 
                             logging.warning(f'ROUND FINISHED, ganadores {winners} self.send.count={self.send_leader_count} len self.send..count={len(self.send_leader)} ')
