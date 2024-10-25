@@ -10,6 +10,7 @@ import copy
 from conexiones.gestors.protocol import *
 from conexiones.gestors.socket_thread import socket_thread
 from src.tournaments.tournament_server import tournament_server
+from src.game.game import GameEndCondition
 
 PORT = 1111
 PORTCLIENT = 1112
@@ -999,6 +1000,10 @@ class server:
                             winners = winners +  i[0][1].name  + ', '
                     if( total_winners == self.tnmt_per_client[ip].plays):                        
                         logging.warning(f'++++++++++++self.winner, termino una vuelta  ganadores ')
+
+                        condition,_ = send_play[3].get_winner()
+                        if condition == GameEndCondition.Draw:
+                            send_play[3].solve_draw()
 
                         if total_winners==1:
                         #or not self.tnmt_per_client[ip].tournament.round:

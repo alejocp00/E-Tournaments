@@ -72,7 +72,7 @@ class DirectElimination(TournamentEngine):
         results = tournament.get_matches_results()
 
         for result in results:
-            _,winner = result.get_winner()
+            condition,winner = result.get_winner()
             players = result.players
             for player in players:
                 index = self._players.index(player)
