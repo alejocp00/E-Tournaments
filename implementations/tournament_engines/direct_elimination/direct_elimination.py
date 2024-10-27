@@ -71,20 +71,19 @@ class DirectElimination(TournamentEngine):
     def __process_results(self, tournament: Tournament):
         results = tournament.get_matches_results()
 
-        for rounds_results in results:
-            for result in rounds_results:
-                condition,winner = result.get_winner()
-                players = result.players
-                for player in players:
-                    index = self._players.index(player)
-                    if winner is not None:
-                        if winner == player:
-                            self._players_state[index] = DirectElimination.PLAYER_IDLE
-                        else:
-                            self._players_state[index] = DirectElimination.PLAYER_ELIMINATED
-                            self._eliminated_count += 1
-                    else:
+        for result in results:
+            condition,winner = result.get_winner()
+            players = result.players
+            for player in players:
+                index = self._players.index(player)
+                if winner is not None:
+                    if winner == player:
                         self._players_state[index] = DirectElimination.PLAYER_IDLE
+                    else:
+                        self._players_state[index] = DirectElimination.PLAYER_ELIMINATED
+                        self._eliminated_count += 1
+                else:
+                    self._players_state[index] = DirectElimination.PLAYER_IDLE
 
     def get_winner(self, tournament):
         if self._winner is not None:
