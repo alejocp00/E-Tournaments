@@ -3,6 +3,15 @@ from src.core.core_engine import CoreEngine
 from colorama import Cursor, Fore, Back, Style
 from os import system
 
+from conexiones.gestors.protocol import pr,sgc,cd
+
+import logging
+import pickle
+import socket
+import time
+import threading
+import os 
+
 class CLI:
     def __init__(self) -> None:
         self._config = Config()
@@ -26,8 +35,9 @@ class CLI:
             self._state_text += Fore.GREEN + "Tournament: " + Fore.RESET + "\n"
             self._state_text += "\t" + str(self._config.tournament_engine) + "\n"
             
-
     def select_configuration(self) -> None:
+        if(self._core_engine.data_cd is not None):
+            self.comunication_with_server(self._core_engine.data_cd)
 
         while True:
             
@@ -82,7 +92,8 @@ class CLI:
             elif "tournament" in options[selected_option].lower():
                 self.set_tournament_engine()
             elif "start" in options[selected_option].lower():
-                self._core_engine.start_tournament()
+                data = self._core_engine.start_tournament()
+                self.comunication_with_server(data)
                 input("Press Enter to restart...")
             elif "exit" in options[selected_option].lower():
                 return
@@ -182,3 +193,123 @@ class CLI:
         engines = get_all_implementations_of(ImplementationsTypes.Tournament)
         engine = self.option_selector("Select Tournament Engine: ","Invalid Option", [pair[0] for pair in engines])
         self._config.tournament_engine = engines[engine][1]()
+
+    def comunication_with_server(self, data):
+        
+        #arreglar comunicacion con el servidor para que ejecute torneo
+        try:
+            self._core_engine.sock.send(data)
+            x = pickle.loads(data)
+            if(type(x) == cd):
+                logging.warning(f'enviado cd state={x.state}')
+            #print(f'\nEnvie sg data={data}')
+            time.sleep(.5)
+            self.receiver(data)
+        except socket.error as e:
+            print(f'Error send/recv x multicast {e.errno}') 
+        
+    def show_plays(self):
+    
+        playcount = 0
+        
+        while True:
+            while playcount< len(self._core_engine.plays):
+                self._core_engine.plays_rlock.acquire()
+                play = self._core_engine.plays[playcount]
+                self._core_engine.plays_rlock.release()
+                
+                if type(play) == str:
+                    print(f'playcount={playcount} {play}')
+                    logging.warning(f'playcount={playcount} {play}')
+                    if play.find('WINNER --') > -1:
+                        resp = ''
+                        while True:
+                            resp = input('Do you want to run another tournament? (y/n): ').lower()
+                            if resp == 'y' or resp == 'n':
+                                break
+                        # os.system('cls')
+                        if(resp == 'y'):
+                            self._core_engine.plays = []
+                            self._core_engine.plays_rlock = threading.RLock()
+                            self.select_configuration()
+#                            tournaments = create_games()       
+#                            start_game.games = tournaments
+                            #start_game.ip = socket.gethostbyname(socket.gethostname())
+                            #data = pickle.dumps(start_game)
+                            #self.sock.send(data)
+                        else:
+                            os._exit(0)
+                else:
+                    # game_instance._players = play[0]
+                    # game_instance._current_player_index = play[1]
+                    # game_instance.config = play[3]
+                    # game_instance.show_board()
+                    print(f'jugada {playcount} : {play[0]}')
+                    #print(f'playcount={playcount} player jugando: {play[0].player_name} otro player: {play[3].players[1 if play[0].player_id == 0 else 0].name}, {play[0]}')
+                    #logging.warning(f'playcount={playcount} player1: {play[0][0].name} player2: {play[0][1].name}, {play[1:]}')
+                playcount+=1  
+                time.sleep(0.5)
+            
+            #
+            #self.new = True
+            #break
+        time.sleep(2)
+            
+    def receiver(self, tnmt):
+    
+        thread = threading.Thread(target=self.show_plays)
+        thread.start()
+        #print('entre en recv listo para recibir')
+        confirm_package_recv = pr()
+        while True:
+            try:
+                data = self._core_engine.sock.recv(40960)
+                if (data):
+                    sms = pickle.loads(data)                    
+                    if(type(sms) == sgc):
+                        try:
+                            self._core_engine.sock.send(tnmt)
+                            os.system('cls')
+                            print('Estoy enviando nuevamente el torneo')
+                        except socket.error as e:
+                            print(f'Error send/recv x multicast {e.errno}')
+
+                    else: 
+                        self._core_engine.plays_rlock.acquire()
+                        self._core_engine.plays.extend(sms.list)
+                        self._core_engine.plays_rlock.release()                
+                        confirm_package_recv.id = sms.id
+                        data = pickle.dumps(confirm_package_recv)
+                        q = self._core_engine.sock.send(data)                    
+                        a = len(sms.list)
+                        logging.warning(f'sms.id={sms.id} len de sms = {a}')
+                    time.sleep(1)
+                
+                else:
+                    print("esty aq")
+
+            except socket.timeout:
+                print('estoy esperando en el receiver')
+                self.sock.settimeout(5)
+            except socket.error as e: 
+                print(f'Waiting...error: {e.errno}')
+                self.sock.close()
+                continue_game = sg()
+                continue_game.continue_game = True
+                print('Trying to connect a new server')
+                while True:
+                    self.sock, _ = self.sendrecv_multicast()
+                    if(self.sock != None and self.sock != -1):
+                        sms = pickle.dumps(continue_game)
+                        try:
+                            self.sock.send(sms)
+                            time.sleep(0.5)
+                            break
+                        except socket.error as e:
+                            print(f'socket error me conecte a otro servidor y le envie sms {e.errno}')
+            except:
+                print ('Error connect en recv y sigo en el ciclo')
+                pass
+            
+        #thread.join()
+        print("se acabo un torneo")

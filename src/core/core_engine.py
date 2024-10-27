@@ -7,7 +7,6 @@ import pickle
 import socket
 import time
 import threading
-import os 
 
 class CoreEngine():
     
@@ -18,7 +17,7 @@ class CoreEngine():
         self.sock = -1
         self.game_instance = None
         self.plays_rlock = threading.RLock()
-        self.new = False
+        self.data_cd = None
         
         logging.basicConfig(filename='client.log', filemode='w', format='%(asctime)s - %(message)s')
         client_down = cd()
@@ -42,21 +41,21 @@ class CoreEngine():
                         client_down.state = True if resp == 'y' else False
                         client_down.ip = socket.gethostbyname(socket.gethostname())
                         #print(f'client_down.response={client_down.response} client_down.state={client_down.state} client_down.ip={client_down.ip}')
-#                if(client_down.response):
-#                    
-#                    logging.warning(f'enviando client response')
-#                    data = pickle.dumps(client_down)
-#
-#            try:
-#                self.sock.send(data)
-#                x = pickle.loads(data)
-#                if(type(x) == cd):
-#                    logging.warning(f'enviado cd state={x.state}')
-#                #print(f'\nEnvie sg data={data}')
-#                time.sleep(.5)
-#                self.receiver(data)
-#            except socket.error as e:
-#                print(f'Error send/recv x multicast {e.errno}') 
+                    if(client_down.response):
+                    
+                        logging.warning(f'enviando client response')
+                        self.data_cd = pickle.dumps(client_down)
+
+                        #try:
+                        #    self.sock.send(data)
+                        #    x = pickle.loads(data)
+                        #    if(type(x) == cd):
+                        #        logging.warning(f'enviado cd state={x.state}')
+                        #    #print(f'\nEnvie sg data={data}')
+                        #    time.sleep(.5)
+                        #    self.receiver(data)
+                        #except socket.error as e:
+                        #    print(f'Error send/recv x multicast {e.errno}')
         # self._log = {{}}
 
     @property
@@ -64,11 +63,7 @@ class CoreEngine():
         return self._config
 
     def start_tournament(self) -> None:
-        # Todo: tomar el id del torneo de algún lugar
-        if self.new:
-            return -1
         
-        playcount = 0
         start_game = sg()
         
         tournament = cfg.Tournament(0,self._config.tournament_engine, self._config.game)
@@ -89,22 +84,8 @@ class CoreEngine():
 
         
 #        print(f"The Winner is: {tournament.get_winner()}")
-        
-        
-
-    
-    #arreglar comunicacion con el servidor para que ejecute torneo
-        try:
-            self.sock.send(data)
-            x = pickle.loads(data)
-            if(type(x) == cd):
-                logging.warning(f'enviado cd state={x.state}')
-            #print(f'\nEnvie sg data={data}')
-            time.sleep(.5)
-            self.receiver(data)
-        except socket.error as e:
-            print(f'Error send/recv x multicast {e.errno}') 
-         
+        return data
+                 
     def sendrecv_multicast(self):
         try:
             message = pickle.dumps(socket.gethostbyname(socket.gethostname()))
@@ -150,99 +131,4 @@ class CoreEngine():
         except socket.error as e:
             print('Error al enviar multicast ' + str(e.errno))
 
-    def show_plays(self):
-    
-        playcount = 0
-        while True:
-            while playcount< len(self.plays):
-                self.plays_rlock.acquire()
-                play = self.plays[playcount]
-                self.plays_rlock.release()
-                if type(play) == str:
-                    print(f'playcount={playcount} {play}')
-                    logging.warning(f'playcount={playcount} {play}')
-                    if play.find('WINNER --') > -1:
-                        resp = ''
-                        while True:
-                            resp = input('Do you want to run another tournament? (y/n): ').lower()
-                            if resp == 'y' or resp == 'n':
-                                break
-                        # os.system('cls')
-                        if(resp == 'y'):
-                            self.plays = []
-                            self.plays_rlock = threading.RLock()
-                            start_game = sg()
-                            self.new = True
-                            return -1
-#                            self.start_tournament()
-#                            tournaments = create_games()       
-#                            start_game.games = tournaments
-                            #start_game.ip = socket.gethostbyname(socket.gethostname())
-                            #data = pickle.dumps(start_game)
-                            #self.sock.send(data)
-                        else:
-                            os._exit(0)
-                else:
-                    # game_instance._players = play[0]
-                    # game_instance._current_player_index = play[1]
-                    # game_instance.config = play[3]
-                    # game_instance.show_board()
-                    print(f'jugada {playcount} : {play[0]}')
-                    #print(f'playcount={playcount} player jugando: {play[0].player_name} otro player: {play[3].players[1 if play[0].player_id == 0 else 0].name}, {play[0]}')
-                    #logging.warning(f'playcount={playcount} player1: {play[0][0].name} player2: {play[0][1].name}, {play[1:]}')
-                playcount+=1  
-                time.sleep(0.5)
-    
-    def receiver(self, tnmt):
-    
-        thread = threading.Thread(target=self.show_plays)
-        thread.start()
-        #print('entre en recv listo para recibir')
-        confirm_package_recv = pr()
-        while True:
-            try:
-                data = self.sock.recv(40960)
-                #print(f'desp data sock')
-                if (data):
-                    sms = pickle.loads(data)                    
-                    if(type(sms) == sgc):
-                        try:
-                            self.sock.send(tnmt)
-                            os.system('cls')
-                            print('Estoy enviando nuevamente el torneo')
-                        except socket.error as e:
-                            print(f'Error send/recv x multicast {e.errno}')
 
-                    else: 
-                        self.plays_rlock.acquire()
-                        self.plays.extend(sms.list)
-                        self.plays_rlock.release()                
-                        confirm_package_recv.id = sms.id
-                        data = pickle.dumps(confirm_package_recv)
-                        q = self.sock.send(data)                    
-                        a = len(sms.list)
-                        logging.warning(f'sms.id={sms.id} len de sms = {a}')
-                    #time.sleep(1)
-
-            except socket.timeout:
-                print('estoy esperando en el receiver')
-                self.sock.settimeout(5)
-            except socket.error as e: 
-                print(f'Waiting...error: {e.errno}')
-                self.sock.close()
-                continue_game = sg()
-                continue_game.continue_game = True
-                print('Trying to connect a new server')
-                while True:
-                    self.sock, _ = self.sendrecv_multicast()
-                    if(self.sock != None and self.sock != -1):
-                        sms = pickle.dumps(continue_game)
-                        try:
-                            self.sock.send(sms)
-                            time.sleep(0.5)
-                            break
-                        except socket.error as e:
-                            print(f'socket error me conecte a otro servidor y le envie sms {e.errno}')
-            except:
-                print ('Error connect en recv y sigo en el ciclo')
-                pass

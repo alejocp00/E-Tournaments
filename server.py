@@ -418,7 +418,8 @@ class server:
         except:
             #print('Error al crear server en except')
             pass
-            
+     #1       
+
     def create_server_client(self):
             self.sock_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             if self.sock_client==-1:
@@ -440,6 +441,8 @@ class server:
                 logging.warning(f"******************Acepte conexion del cliente: {ip}!")                           
                 thread_rec = threading.Thread(target=self.receiver,name='recv_create_server_clien'+ip, args=(ip, ))
                 thread_rec.start()
+                
+                #thread_rec.join()
 
     def send_server(self, ip):
         play_count = self.chkp_repl
@@ -914,7 +917,7 @@ class server:
                         self.tnmt_per_client[ip].client_down = True
                 else:
                     time += 1
-                    if time >= 10000000000:
+                    if time >= 1000000000000:
                         print('limpiando cliente {ip}')
                         sock.close()
                         self.connections_in.pop(ip)
