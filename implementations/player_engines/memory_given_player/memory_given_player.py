@@ -75,9 +75,8 @@ class MemoryGivenPlayer(PlayerEngine):
     def memo_action(self, action):
         if action not in self.historial:
             self.historial[action] = ActionRecord()
+            
     
-    # Todo: Es necesario que el game state tenga winner
-    # Todo: Es necesario un método para todos los jugadores que sea para que se corra al finalizar el juego
     def update_end_game_result(self, game_state: GameState):
         if game_state.winner == self:
             self.historial[game_state.previous_action].victories += 1
