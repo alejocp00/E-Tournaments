@@ -3,7 +3,7 @@ from src.core.core_engine import CoreEngine
 from colorama import Cursor, Fore, Back, Style
 from os import system
 
-from conexiones.gestors.protocol import pr,sgc,cd
+from conexiones.gestors.protocol import pr, sg,sgc,cd
 
 import logging
 import pickle
