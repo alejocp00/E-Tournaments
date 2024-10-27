@@ -11,3 +11,6 @@ class AllGamesRandomPlayer(PlayerEngine):
 
     def get_next_action(self, game_state: GameState) -> Action:
         return random.choice(game_state.get_all_moves())
+
+    def update_end_game_result(self, game_state: GameState):
+        pass

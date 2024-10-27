@@ -12,9 +12,6 @@ class TickTackToeGame(Game):
     def init_game_state(self):
         self._game_state = TickTackToeGameState.TTTGameState(self.players)
 
-    def game_state(self) -> TickTackToeGameState.GameState:
-        return self._game_state
-
     def get_winner(self) -> tuple[GameEndCondition,TickTackToeGameState.Player | None]:
         if self._winner is not None:
             return (GameEndCondition.Victory,self._winner)
@@ -24,7 +21,7 @@ class TickTackToeGame(Game):
             return (GameEndCondition.Draw, self._winner)
 
         board = self._game_state.board
-
+        
         for i in range(3):
             if board[i][0] == board[i][1] == board[i][2] and board[i][0] != TickTackToeGameState.Tokens.EMPTY_TOKEN:
                 self._winner = self.players[0 if board[i][0] == Tokens.PLAYER_0_TOKEN else 1]
@@ -53,6 +50,8 @@ class TickTackToeGame(Game):
             self._game_state.state = TickTackToeGameState.TTTGameState.FINISHED
 
         if self._game_state.state == TickTackToeGameState.TTTGameState.FINISHED:
+            for player in self._game_state.players:
+                player.on_game_end(self, self.game_state)
             raise StopIteration
 
         current_player = self._game_state.get_next_player()
