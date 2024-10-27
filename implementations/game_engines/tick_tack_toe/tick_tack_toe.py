@@ -35,6 +35,9 @@ class TickTackToeGame(Game):
 
         condition = GameEndCondition.Victory if self._winner is not None else GameEndCondition.Unfinished
 
+        self.game_state.winner = self._winner
+        self.game_state.end_condition = condition
+
         return (condition, self._winner)
 
     def __next__(self):
