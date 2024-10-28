@@ -104,3 +104,6 @@ class Player:
         
     def __hash__(self) -> int:
         return hash(self._name+str(self._id))
+    
+    def on_game_end(self, game_state: GameState):
+        self._player_engine.update_end_game_result(game_state)

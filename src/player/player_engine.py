@@ -13,4 +13,8 @@ class PlayerEngine(ABC):
 
     @abstractmethod
     def get_next_action(self, game_state: GameState) -> Action:
-        pass
+        raise NotImplementedError()
+
+    @abstractmethod
+    def update_end_game_result(self, game_state: GameState):
+        raise NotImplementedError()
