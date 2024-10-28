@@ -757,7 +757,7 @@ class server:
                                 self.tnmt_per_client[ip].round.games = copy.deepcopy(games)
                                 logging.warning(f'DDDDDDDDDDDDDDDevuelto de matching ip={ip} self.tnmt_per_client[ip].plays={self.tnmt_per_client[ip].plays} juegos')
                                 if(ip not in self.connection_client):
-                                    self.connection_client[ip] = threading.Thread(target=self.send_client,name='send_client', args=(ip,))
+                                    self.connection_client[ip] = threading.Thread(target=self.send_client,name='send_client', args=(ip,ip, ))
                                     self.connection_client[ip].start()
                                 #self.distribute_games(games, sms.ip, 0)
                                 distrib = threading.Thread(target=self.distribute_games,name='distribinic', args=(games, ip,0,))
@@ -765,7 +765,7 @@ class server:
                             else:
                                 logging.warning('voy a continuar el juego que se quedo a mitad tmnt:={self.tnmt_per_client}')      
                                 if ip not in self.connection_client:        
-                                    self.connection_client[ip] = threading.Thread(target=self.send_client,name='send_client_continue', args=(ip,))
+                                    self.connection_client[ip] = threading.Thread(target=self.send_client,name='send_client_continue', args=(ip,ip,))
                                     self.connection_client[ip].start()
 
                         elif(type(sms) == dg):
@@ -807,19 +807,24 @@ class server:
                         elif(type(sms) == cd):
                             logging.warning(f'response={sms.response} state={sms.state} ip={sms.ip}')
                             logging.warning(f'connection_client={self.connection_client}')
-                            if sms.ip not in self.connection_client:        
-                                self.connection_client[ip] = threading.Thread(target=self.send_client,name='send_client_continue', args=(ip,))
-                                self.connection_client[ip].start()
+                            a = None
+                            for adr in self.connection_client:
+                                if not self.connections_in[adr].active:
+                                    a = adr
+                                    break        
+                            self.connection_client[ip] = threading.Thread(target=self.send_client,name='send_client_continue', args=(adr, ip, ))
+                            self.connection_client[ip].start()
                                 
                             if(sms.state):
                                 #print(f'cd sms.state={sms.state}')
                                 #print(f'finished={self.tnmt_per_client[ip].finished}')
-                                self.tnmt_per_client[sms.ip].play_count = 0
+                                self.tnmt_per_client[adr].play_count = 0
                             else:
                                 logging.warning(f'entre en cd state=false')
                                 #print(f'recibi cd nombre hilo= {self.connection_server[ip].name} is_alive={self.connection_server[ip].is_alive} client[sms.ip].play_count={self.tnmt_per_client[sms.ip].play_count}')
                                 time.sleep(.5)
-                            self.tnmt_per_client[sms.ip].client_down = False
+                            self.tnmt_per_client[adr].client_down = False
+                            self.connections_in.pop(a)
                             
                         sms = None    
                 except socket.timeout: 
@@ -859,31 +864,32 @@ class server:
             print (f'en connect_to error - {e.errno}')
             return e.errno
 
-    def send_client(self, ip):
-            logging.warning(f'vvvvvvventre en send client,  ip={ip}  connec_in= {self.connections_in} self.send_leader_count = {self.send_leader_count} len send lead={len(self.send_leader)}')
+    def send_client(self, ip_in, ip_out):
+            logging.warning(f'vvvvvvventre en send client,  ip={ip_in}  connec_in= {self.connections_in} self.send_leader_count = {self.send_leader_count} len send lead={len(self.send_leader)}')
             package_send = 0
             time = 0
-            if ip in self.tnmt_per_client:
-                logging.warning(f'en send  client finis={self.tnmt_per_client[ip].finished} down:{self.tnmt_per_client[ip].client_down} self.send_leader_count = {self.send_leader_count} len send lead={len(self.send_leader)}')
-            if ip not in self.ps:
-                self.ps[ip]=ps()
-                self.pr[ip]=[]
-            while True:            
-                if(ip in self.tnmt_per_client and not self.tnmt_per_client[ip].client_down and not self.tnmt_per_client[ip].finished):
+            #buscar ip que se cayo
+            if ip_in in self.tnmt_per_client:
+                logging.warning(f'en send  client finis={self.tnmt_per_client[ip_in].finished} down:{self.tnmt_per_client[ip_in].client_down} self.send_leader_count = {self.send_leader_count} len send lead={len(self.send_leader)}')
+            if ip_in not in self.ps:
+                self.ps[ip_in]=ps()
+                self.pr[ip_in]=[]
+            while True:        
+                if(ip_in in self.tnmt_per_client and not self.tnmt_per_client[ip_in].client_down and not self.tnmt_per_client[ip_in].finished):
                     time = 0
                     try:
-                        sock = self.connections_in[ip].sock
+                        sock = self.connections_in[ip_out].sock
                         sms = None
                         if(self.sgc.active):
                             sms = pickle.dumps(self.sgc)       
 
-                        elif (ip in self.play_clients):
-                            lon=len(self.play_clients[ip])                    
-                            if self.tnmt_per_client[ip].play_count < lon:
+                        elif (ip_in in self.play_clients):
+                            lon=len(self.play_clients[ip_in])                    
+                            if self.tnmt_per_client[ip_in].play_count < lon:
                                 package_send += 1
-                                self.ps[ip].id = package_send
-                                self.ps[ip].list = self.play_clients[ip][self.tnmt_per_client[ip].play_count:lon]
-                                sms = pickle.dumps(self.ps[ip])
+                                self.ps[ip_in].id = package_send
+                                self.ps[ip_in].list = self.play_clients[ip_in][self.tnmt_per_client[ip_in].play_count:lon]
+                                sms = pickle.dumps(self.ps[ip_in])
                                 #logging.warning(f'en send client ip={ip} a enviar package_send={package_send} play_count={self.tnmt_per_client[ip].play_count} de len:{lon}')
 
                         if (sms != None):
@@ -892,46 +898,48 @@ class server:
                             if(type(a) == sgc):
                                 self.sgc.active = False
                             else:
-                                while self.ps[ip].id>0 and self.ps[ip].id not in self.pr[ip] and not self.tnmt_per_client[ip].client_down:
+                                while self.ps[ip_in].id>0 and self.ps[ip_in].id not in self.pr[ip_in] and not self.tnmt_per_client[ip_in].client_down:
                                     #logging.warning(f'en send client ps')
                                     pass                                                                
-                                for i in self.ps[ip].list:
+                                for i in self.ps[ip_in].list:
                                     if type(i) == str:
                                         space=4
                                         if i.find('WINNER --') > -1:
-                                            self.tnmt_per_client[ip].finished=True
-                                            print(f'FINISH ip={ip}')
+                                            self.tnmt_per_client[ip_in].finished=True
+                                            print(f'FINISH ip={ip_in}')
                                             space=2
                                         verify_winners_sent = i.split( ' ' )
                                         winners_tosent=len(verify_winners_sent)-space
                                         logging.warning(f' {i} tiene {winners_tosent} ganadores  ')
                                     else:
-                                        logging.warning(f' enviado en send client ip= {ip} j1:{i[3].players[0].name} j2:{i[3].players[1].name} jug: {i[0]} sender_leader_count={self.send_leader_count}')
+                                        logging.warning(f' enviado en send client ip= {ip_in} j1:{i[3].players[0].name} j2:{i[3].players[1].name} jug: {i[0]} sender_leader_count={self.send_leader_count}')
                                         pass
                                 
-                                self.tnmt_per_client[ip].play_count =lon                   
+                                self.tnmt_per_client[ip_in].play_count =lon                   
                         else:
-                            if not self.tnmt_per_client[ip].finished:
-                                if(ip in self.tnmt_per_client)  and not self.tnmt_per_client[ip].client_down and not self.game_pause: # and self.tnmt_per_client[ip].state_winners_sent:
-                                    self.tnmt_per_client[ip].round.time += 1
-                                    if self.tnmt_per_client[ip].round.time >= 5000000: #buscar juegos que no hayan comenzado para lanzarlos
-                                        logging.warning(f'voy a unfinished_game ip={ip} self.send_leader_count = {self.send_leader_count} len send lead={len(self.send_leader)}')
-                                        self.unfinished_game(ip)
-                                        self.tnmt_per_client[ip].round.time = 0
+                            if not self.tnmt_per_client[ip_in].finished:
+                                if(ip_in in self.tnmt_per_client)  and not self.tnmt_per_client[ip_in].client_down and not self.game_pause: # and self.tnmt_per_client[ip].state_winners_sent:
+                                    self.tnmt_per_client[ip_in].round.time += 1
+                                    if self.tnmt_per_client[ip_in].round.time >= 5000000: #buscar juegos que no hayan comenzado para lanzarlos
+                                        logging.warning(f'voy a unfinished_game ip={ip_in} self.send_leader_count = {self.send_leader_count} len send lead={len(self.send_leader)}')
+                                        self.unfinished_game(ip_in)
+                                        self.tnmt_per_client[ip_in].round.time = 0
                     except socket.error as e:  
-                        self.tnmt_per_client[ip].client_down = True
+                        self.tnmt_per_client[ip_out].client_down = True
                 else:
                     time += 1
                     if time >= 1000000000000:
                         print('limpiando cliente {ip}')
                         sock.close()
-                        self.connections_in.pop(ip)
-                        self.tnmt_per_client.pop(ip)
-                        self.play_clients.pop(ip)
-                        self.game_replicas.pop(ip)
-                        self.pr.pop(ip)
-                        self.ps.pop(ip)
+                        self.connections_in.pop(ip_out)
+                        self.tnmt_per_client.pop(ip_out)
+                        self.play_clients.pop(ip_out)
+                        self.game_replicas.pop(ip_out)
+                        self.pr.pop(ip_out)
+                        self.ps.pop(ip_out)
                         return
+                if ip_in != ip_out and self.tnmt_per_client[ip_in].finished == True:
+                    break   
                 
     def update_succesor_table(self, server_down):
         self.succesor_table_rlock.acquire()
@@ -1013,7 +1021,9 @@ class server:
                         #    if not self.tnmt_per_client[ip].tournament.round:
                         #        self.tnmt_per_client[ip].tournament.players = [k[0] for k in self.tnmt_per_client[ip].round.winners]
                             for _ in self.tnmt_per_client[ip].tournament:
-                                continue            
+                                if not self.tnmt_per_client[ip].tournament.get_winner():
+                                    print("error")
+                                    break            
                             win = self.tnmt_per_client[ip].tournament.get_winner()  
                             
                             logging.warning(f'set play WINNER --->  {win}  cliente {ip} ')
