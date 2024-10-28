@@ -294,14 +294,15 @@ class CLI:
                 print('Trying to connect a new server')
                 while True:
                     self._core_engine.sock, _ = self._core_engine.sendrecv_multicast()
-                    if(self._core_engine.sock != None and self._core_engine.sock != -1):
-                        sms = pickle.dumps(continue_game)
-                        try:
-                            self._core_engine.sock.send(sms)
-                            time.sleep(0.5)
-                            break
-                        except socket.error as e:
-                            print(f'socket error me conecte a otro servidor y le envie sms {e.errno}')
+                    self._core_engine.data_cd = None
+                    #if(self._core_engine.sock != None and self._core_engine.sock != -1):
+                    sms = self.select_configuration()
+                    try:
+                        self._core_engine.sock.send(sms)
+                        time.sleep(0.5)
+                        break
+                    except socket.error as e:
+                        print(f'socket error me conecte a otro servidor y le envie sms {e.errno}')
             except:
                 print ('Error connect en recv y sigo en el ciclo')
                 pass

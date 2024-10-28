@@ -25,4 +25,8 @@ class Action:
         return not self.__eq__(value)
         
     def __hash__(self) -> int:
-        return hash(self.action.keys())
+        h = 0
+        for key in self.action:
+            kh = hash(key)
+            h = h - kh if h > kh else kh - h
+        return h

@@ -1,6 +1,6 @@
 from enum import Enum
 import random
-from game.game_state import GameState
+from src.game.game_state import GameState
 from src.player.player_engine import PlayerEngine
 from src.game.action import Action
 from src.game.game import GameEndCondition
@@ -68,8 +68,8 @@ class ActionRecord:
         ].sort(key=lambda x: x[1], reverse=True)
 
 class MemoryGivenPlayer(PlayerEngine):
-    def __init__(self, engine_name: str):
-        self._engine_name = engine_name
+    def __init__(self):
+        self._engine_name = "MemoryGivenPlayer"
         self.historial: dict[Action, ActionRecord] = {}
     
     def memo_action(self, action):
