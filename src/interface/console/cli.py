@@ -196,7 +196,6 @@ class CLI:
 
     def comunication_with_server(self, data):
         
-        #arreglar comunicacion con el servidor para que ejecute torneo
         try:
             self._core_engine.sock.send(data)
             x = pickle.loads(data)
@@ -253,8 +252,7 @@ class CLI:
             #
             #self.new = True
             #break
-        time.sleep(2)
-            
+                   
     def receiver(self, tnmt):
     
         thread = threading.Thread(target=self.show_plays)
@@ -284,25 +282,22 @@ class CLI:
                         a = len(sms.list)
                         logging.warning(f'sms.id={sms.id} len de sms = {a}')
                     time.sleep(1)
-                
-                else:
-                    print("esty aq")
 
             except socket.timeout:
                 print('estoy esperando en el receiver')
-                self.sock.settimeout(5)
+                self._core_engine.sock.settimeout(5)
             except socket.error as e: 
                 print(f'Waiting...error: {e.errno}')
-                self.sock.close()
+                self._core_engine.sock.close()
                 continue_game = sg()
                 continue_game.continue_game = True
                 print('Trying to connect a new server')
                 while True:
-                    self.sock, _ = self.sendrecv_multicast()
-                    if(self.sock != None and self.sock != -1):
+                    self._core_engine.sock, _ = self._core_engine.sendrecv_multicast()
+                    if(self._core_engine.sock != None and self._core_engine.sock != -1):
                         sms = pickle.dumps(continue_game)
                         try:
-                            self.sock.send(sms)
+                            self._core_engine.sock.send(sms)
                             time.sleep(0.5)
                             break
                         except socket.error as e:
@@ -311,5 +306,3 @@ class CLI:
                 print ('Error connect en recv y sigo en el ciclo')
                 pass
             
-        #thread.join()
-        print("se acabo un torneo")

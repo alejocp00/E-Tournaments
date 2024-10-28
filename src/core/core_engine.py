@@ -24,7 +24,7 @@ class CoreEngine():
         self.sock,pro = self.sendrecv_multicast()
         
         if self.sock!=-1:   
-            if(type(pro) == cd):
+            if(type(pro) == cd ):
                 if pro.resume:            
                     resp = ''
                     while True:
@@ -120,6 +120,7 @@ class CoreEngine():
 
                             res=s.connect((ip, self.PORT))
                             if res==None:
+                                print(server)
                                 print(f'Connected to server: {ip}')
                                 logging.warning(f'Connected to server: {ip}')
                                 return s,data
