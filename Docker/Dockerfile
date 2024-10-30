@@ -2,7 +2,12 @@ FROM python:3.12.3-slim
 
 WORKDIR /app
 
-COPY . /app
+COPY requirements.txt .
 
 RUN python3 -m pip install -r requirements.txt
-RUN ["pip", "install", "zmq", "pyzmq", "sortedcontainers"]
+
+COPY . .
+
+EXPOSE 8000
+
+CMD [ "python3", "server.py" ]

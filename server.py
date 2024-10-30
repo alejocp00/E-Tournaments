@@ -10,14 +10,21 @@ import copy
 from conexiones.gestors.protocol import *
 from conexiones.gestors.socket_thread import socket_thread
 from src.tournaments.tournament_server import tournament_server
+from dotenv import load_dotenv
+import os
 
-PORT = 1111
-PORTCLIENT = 1112
 
 # This class will be the server engine, where you add a new node if a new tournament is created, look up for the replica and other requests
 class server:
     
     def __init__(self, bits) -> None:
+        load_dotenv()
+        
+        self.port  = int(os.getenv('PORT'))
+        self.port_client = int(os.getenv('PORT_CLIENT'))
+        self.multicast_addr = os.getenv('MULTICAST_ADDR')
+        self.multicast_port = int(os.getenv('MULTICAST_PORT'))
+        
         self.ip = socket.gethostbyname(socket.gethostname())
         self.id = self.get_id(bits)
         self.bits = bits
@@ -104,8 +111,8 @@ class server:
     
     def receive_multicast(self):
         try:
-            multicast_group = '224.3.29.80'
-            server_address = ('', 10000)
+            multicast_group = self.multicast_addr
+            server_address = ('', self.multicast_port+self.bits)
             # Create the socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             # Bind to the server address
@@ -329,7 +336,7 @@ class server:
 
     def send_multicast(self):
         message = pickle.dumps(self.id)
-        multicast_group = ('224.3.29.80', 10000)
+        multicast_group = (self.multicast_addr, self.multicast_port)
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(0.9)
         ttl = struct.pack('b', 1)
@@ -402,7 +409,7 @@ class server:
             if sock==-1:
                 print('Error al crear el socket ')
                 exit()
-            if sock.bind((socket.gethostbyname(socket.gethostname()), PORT))==-1:
+            if sock.bind((socket.gethostbyname(socket.gethostname()), self.port))==-1:
                 print('Error en el bind')
                 exit()
             logging.warning('creando server ip: ' + socket.gethostbyname(socket.gethostname()))
@@ -431,7 +438,7 @@ class server:
             if self.sock_client==-1:
                 print('Error al crear el socket client')
                 exit()
-            if self.sock_client.bind((socket.gethostbyname(socket.gethostname()), PORTCLIENT))==-1:
+            if self.sock_client.bind((socket.gethostbyname(socket.gethostname()), self.port_client))==-1:
                 print('Error en el bind client')
                 exit()
             logging.warning('creando server client ip: ' + socket.gethostbyname(socket.gethostname()))
@@ -850,7 +857,7 @@ class server:
     def connect_to(self, ip):
         try:
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)                
-            res=s.connect((ip, PORT))
+            res=s.connect((ip, self.port))
             logging.warning(f'resultado de la connect: {res} ip {ip}')
             if res == None:
                 self.connections_out_rlock.acquire()
@@ -1371,11 +1378,11 @@ class server:
 
 def main():
     logging.basicConfig(filename='server.log', filemode='w', format='%(asctime)s - %(message)s')#, filemode='w', format='%(message)s')
-    s = server(160)
+    s = server(int(input("Set bites")))
     thread = threading.Thread(target=s.create_server)
     thread.start()    
     s.send_multicast()    
     thread2 = threading.Thread(target=s.receive_multicast)
     thread2.start()
-    
+
 main()
