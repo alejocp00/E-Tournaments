@@ -46,7 +46,7 @@ class CoreEngine():
                             if resp == 'y' or resp == 'n':
                                 break
                         client_down.state = True if resp == 'y' else False
-                        client_down.ip = socket.gethostbyname(socket.gethostname())
+                        client_down.ip = "127.0.1.1"
                         # print(f'client_down.response={client_down.response} client_down.state={client_down.state} client_down.ip={client_down.ip}')
                     if(client_down.response):
 
@@ -77,7 +77,7 @@ class CoreEngine():
         tournament.players = self._config.players_in_tournament 
 
         start_game.games = tournament
-        start_game.ip = socket.gethostbyname(socket.gethostname())
+        start_game.ip = "127.0.1.1"
         data = pickle.dumps(start_game)
 
         #        for match in tournament:
@@ -93,7 +93,7 @@ class CoreEngine():
 
     def sendrecv_multicast(self):
         try:
-            message = pickle.dumps(socket.gethostbyname(socket.gethostname()))
+            message = pickle.dumps("127.0.1.1")
             multicast_group = (self.multicast_addr, self.multicast_port)
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.settimeout(0.9)

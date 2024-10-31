@@ -19,6 +19,14 @@ class ConnectionType(Enum):
     Client= 1
     Multicast = 2
 
+class ServerInfo():
+    def __init__(self,id,multicast_port,server_port,client_port):
+        self.id = id
+        self.multicast_port = multicast_port
+        self.server_port = server_port
+        self.client_port = client_port
+    
+
 # This class will be the server engine, where you add a new node if a new tournament is created, look up for the replica and other requests
 class server:
 
@@ -36,7 +44,10 @@ class server:
         self.current_multicast_port = self.master_multicast_port
         self.max_multicast_port = int(os.getenv('MAX_MULTICAST_PORT'))
 
-        self.ip = socket.gethostbyname(socket.gethostname())
+        self.sock_multicast = None 
+        self.sock_server = None
+
+        self.ip = "127.0.1.1"
         # self.ip = '127.0.1.1'
         self.id = self.get_id(bits)
         self.bits = bits
@@ -135,6 +146,32 @@ class server:
                 return
             time.sleep(1)
 
+    def rebind_ports(self,connection_type:ConnectionType):
+        # Closing actual connection and start the bind process to the master port
+        new_sock = None
+        ip = ''
+        if connection_type == ConnectionType.Multicast:
+            new_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            ip = ''
+        else:
+            new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ip = "127.0.1.1"
+            
+        _,port=self.bind_to_address(new_sock,ip,ConnectionType.Multicast)
+
+        if port ==self.master_multicast_port or port == self.master_port_client or port == self.master_server_client:
+            if connection_type == ConnectionType.Multicast:
+                self.sock_multicast.close()
+                self.sock_multicast = new_sock
+            elif connection_type == ConnectionType.Client:
+                self.sock_client.close()
+                self.sock_client= new_sock
+            else:
+                self.sock_server.close()
+                self.sock_server= new_sock
+        else:
+            new_sock.close()
+
     def bind_to_address(self,sock,ip,type:ConnectionType):
         bonded = False
         max_port = self.max_multicast_port
@@ -168,26 +205,27 @@ class server:
 
             if port > max_port:
                 port = master_port
+        return (ip,port)
 
     def receive_multicast(self):
         try:
             multicast_group = self.multicast_addr
             server_address_ip = ''
             # Create the socket
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            self.sock_multicast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             # Bind to the server address
-            self.bind_to_address(sock,server_address_ip,ConnectionType.Multicast)
+            self.bind_to_address(self.sock_multicast,server_address_ip,ConnectionType.Multicast)
             # Tell the operating system to add the socket to the multicast group on all interfaces.
             group = socket.inet_aton(multicast_group)
             mreq = struct.pack('4sL', group, socket.INADDR_ANY)        
-            sock.setsockopt(socket.IPPROTO_IP,  socket.IP_ADD_MEMBERSHIP, mreq)
+            self.sock_multicast.setsockopt(socket.IPPROTO_IP,  socket.IP_ADD_MEMBERSHIP, mreq)
         except socket.error as e:
             return
         print(f'SERVER READY')
-        sock.settimeout(10)
+        self.sock_multicast.settimeout(10)
         while True:
             try:
-                data, address = sock.recvfrom(4096)
+                data, address = self.sock_multicast.recvfrom(4096)
                 print('------------')
                 print(address)
             except socket.timeout:  
@@ -226,8 +264,8 @@ class server:
             else:          
                 if (data):
                     data = pickle.loads(data)
-                    if(type(data) == int): #servidor solicitando entrar
-                        data = self.receive_server(data, address, sock)
+                    if(type(data) == ServerInfo): #servidor solicitando entrar
+                        data = self.receive_server(data.id, ("127.0.1.1",data.multicast_port), self.sock_multicast)
                     else: #cliente solicitando entrar
                         if (self.ip == self.leader and not self.game_pause):
                             self.sg.ip = data
@@ -241,7 +279,7 @@ class server:
                                 if i == data and not self.tnmt_per_client[(i,p)].finished:
                                     self.cd.resume = True
                             sms = pickle.dumps(self.cd)
-                            sock.sendto(sms, address)
+                            self.sock_multicast.sendto(sms, address)
                             self.cd.resume = False
                             logging.warning(f'en recv mult le envie mi ip al cliente {address}, data={data}')
 
@@ -468,19 +506,19 @@ class server:
 
     def create_server(self):
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            if sock==-1:
+            self.sock_server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            if self.sock_server==-1:
                 print('Error al crear el socket ')
                 exit()
 
-            self.bind_to_address(sock,socket.gethostbyname(socket.gethostname()),ConnectionType.Server)
+            self.bind_to_address(self.sock_server,"127.0.1.1",ConnectionType.Server)
 
-            logging.warning('creando server ip: ' + socket.gethostbyname(socket.gethostname()))
-            if sock.listen(5)==-1:
+            logging.warning('creando server ip: ' + "127.0.1.1")
+            if self.sock_server.listen(5)==-1:
                 print('Error al activar el listen')
                 exit()
             while True:
-                client_socket, client_address = sock.accept()                
+                client_socket, client_address = self.sock_server.accept()                
                 ip=client_address
                 self.connections_in_rlock.acquire()
                 self.connections_in[ip]= socket_thread(client_socket, True)
@@ -502,9 +540,9 @@ class server:
             print('Error al crear el socket client')
             exit()
 
-        self.bind_to_address(self.sock_client,socket.gethostbyname(socket.gethostname()),ConnectionType.Client)
+        self.bind_to_address(self.sock_client,"127.0.1.1",ConnectionType.Client)
 
-        logging.warning('creando server client ip: ' + socket.gethostbyname(socket.gethostname()))
+        logging.warning('creando server client ip: ' + "127.0.1.1")
         if self.sock_client.listen(5)==-1:
             print('Error al activar el listen client')
             exit()
@@ -1050,7 +1088,7 @@ class server:
         return ip
 
     def get_id(self, key_length):
-        key = str(socket.gethostbyname(socket.gethostname())) + str(random.randint(0, 10000000))
+        key = str("127.0.1.1") + str(random.randint(0, 10000000))
         hash_func = hashlib.sha1
         hash_value = int(hash_func(key.encode()).hexdigest(), 16)
         return hash_value % (2 ** key_length)
