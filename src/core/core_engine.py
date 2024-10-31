@@ -15,7 +15,7 @@ class CoreEngine():
     def __init__(self,config:cfg.Config) -> None:
         load_dotenv()
 
-        self.port = int(os.getenv('PORT_CLIENT'))
+        self.server_client_port = int(os.getenv('PORT_CLIENT'))
         self.multicast_addr = os.getenv('MULTICAST_ADDR')
         self.multicast_port = int(os.getenv('MULTICAST_PORT'))
 
@@ -123,7 +123,7 @@ class CoreEngine():
 
                             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)            
 
-                            res=s.connect((ip, self.port))
+                            res=s.connect((ip, self.server_client_port))
                             if res==None:
                                 print(server)
                                 print(f'Connected to server: {ip}')
