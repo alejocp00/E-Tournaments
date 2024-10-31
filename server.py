@@ -109,10 +109,24 @@ class server:
         self.rep = []
         self.rep_rlock  = threading.RLock()
     
+    def wait_for_down(self,server_address,sock):
+        while True:
+            try:
+                sock.bind(server_address)
+                print("conectándome al server")
+            except socket.error as e:
+                if e.errno == 98:
+                    print("Servidor ocupado")
+            else:
+                print("servidor libre")
+                sock.close()
+                return
+            time.sleep(1)
+    
     def receive_multicast(self):
         try:
             multicast_group = self.multicast_addr
-            server_address = ('', self.multicast_port+self.bits)
+            server_address = ('', self.multicast_port)
             # Create the socket
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             # Bind to the server address
@@ -123,6 +137,9 @@ class server:
             sock.setsockopt(socket.IPPROTO_IP,  socket.IP_ADD_MEMBERSHIP, mreq)
         except socket.error as e:
             print(f'Error al crear server multicast {e.errno}')
+            if e.errno == 98:
+                self.wait_for_down(server_address,sock)
+                self.receive_multicast()
             return
         print(f'SERVER READY')
         sock.settimeout(10)
@@ -404,7 +421,7 @@ class server:
         finally:
             logging.warning('closing socket send multicast')
             pass
-    
+        
     def create_server(self):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -1149,6 +1166,8 @@ class server:
                     self.send_leader_rlock.release()
                     #logging.warning(f'guarde en send leader del client_ip {client_ip} j1:{x[0][0].name} j2:{x[0][1].name} Jugada: {x[1:]} sender_leader_count={self.send_leader_count} len send server={len(self.send_leader)}')
                 #logging.warning(f'ejecute turno en ip={client_ip} j1:{x[0][0].name} j2:{x[0][1].name} y la jug: {x[1:]} si leader:{self.leader} send_leader_count={self.send_leader_count}') #tiene la ultima jugada
+                
+                # Tip: Posible lugar para que se realice el envío del juego al resto de los servidores
                 time.sleep(0.5)
         if game.get_winner()[1] is not None:
             print(f'Juego terminado gano: {game.get_winner()[1]} entre  jugador1={game._players[0].name}, jugador2={game._players[1].name}')
