@@ -303,6 +303,8 @@ class CLI:
                         break
                     except socket.error as e:
                         print(f'socket error me conecte a otro servidor y le envie sms {e.errno}')
+            except KeyboardInterrupt:
+                break
             except:
                 print ('Error connect en recv y sigo en el ciclo')
                 pass

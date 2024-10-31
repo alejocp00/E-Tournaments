@@ -26,6 +26,7 @@ class server:
         self.multicast_port = int(os.getenv('MULTICAST_PORT'))
         
         self.ip = socket.gethostbyname(socket.gethostname())
+        # self.ip = '127.0.1.1'
         self.id = self.get_id(bits)
         self.bits = bits
         

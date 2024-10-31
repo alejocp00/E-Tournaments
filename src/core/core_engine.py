@@ -15,7 +15,7 @@ class CoreEngine():
     def __init__(self,config:cfg.Config) -> None:
         load_dotenv()
 
-        self.port = os.getenv('PORT_CLIENT')
+        self.port = int(os.getenv('PORT_CLIENT'))
         self.multicast_addr = os.getenv('MULTICAST_ADDR')
         self.multicast_port = int(os.getenv('MULTICAST_PORT'))
 
@@ -119,7 +119,7 @@ class CoreEngine():
                         # print('en send multicast received {!r} from {}'.format( data, server))
                         if(server != None): 
                             data = pickle.loads(data)                                         
-                            ip = server[0]
+                            ip = '127.0.1.1'
 
                             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)            
 
