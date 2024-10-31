@@ -351,16 +351,18 @@ class server:
             while True:
                 try:
                     data, server = sock.recvfrom(1024)
+                    print(data)
+                    print(server)
                 except socket.timeout:
-                    logging.warning('NADIE MAS RESPONDE al send multicast--timed out, no more responses')
+                    print('NADIE MAS RESPONDE al send multicast--timed out, no more responses')
                     sock.close()
                     break
                 except socket.error as e:
-                    logging.warning('Error en send multicast ' + str(e.errno))
+                    print('Error en send multicast ' + str(e.errno))
                     sock.close()
                     break
                 else:
-                    logging.warning('en send multicast received {!r} from {}'.format( data, server))
+                    print('en send multicast received {!r} from {}'.format( data, server))
                     
                     if(server != None): 
                         data = pickle.loads(data)                                         
@@ -1378,7 +1380,7 @@ class server:
 
 def main():
     logging.basicConfig(filename='server.log', filemode='w', format='%(asctime)s - %(message)s')#, filemode='w', format='%(message)s')
-    s = server(int(input("Set bites")))
+    s = server(160)
     thread = threading.Thread(target=s.create_server)
     thread.start()    
     s.send_multicast()    

@@ -100,7 +100,7 @@ class CoreEngine():
             # Set the time-to-live for messages to 1 so they do not
             # go past the local network segment.
             ttl = struct.pack('b', 1)
-            self.sock.setsockopt(socket.IPPROTO_IP, socket.mult, ttl)        
+            self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
             while True:
                 self.sock.sendto(message, multicast_group)
                 while True:                        

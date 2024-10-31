@@ -1,7 +1,7 @@
 env/
 __pycache__/
 
-*
 !Dockerfile
 !requirements.txt
 !server.py
+.pdf
