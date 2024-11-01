@@ -15,9 +15,13 @@ class CoreEngine():
     def __init__(self,config:cfg.Config) -> None:
         load_dotenv()
 
-        self.server_client_port = int(os.getenv('PORT_CLIENT'))
+        self.master_server_client_port = int(os.getenv('PORT_CLIENT'))
         self.multicast_addr = os.getenv('MULTICAST_ADDR')
-        self.multicast_port = int(os.getenv('MULTICAST_PORT'))
+        self.master_multicast_port = int(os.getenv('MULTICAST_PORT'))
+        self.max_multicast_port = int(os.getenv("MAX_MULTICAST_PORT"))
+        self.max_server_client_port = int(os.getenv("MAX_PORT_CLIENT"))
+        self.multicast_port = self.master_multicast_port
+        self.server_client_port = self.master_server_client_port
 
         self._config = config
         self.plays = []
@@ -90,11 +94,21 @@ class CoreEngine():
 
         #        print(f"The Winner is: {tournament.get_winner()}")
         return data
+    def increase_ports(self):
+        self.multicast_port += (
+            1
+            if self.multicast_port <= self.max_multicast_port
+            else self.master_multicast_port
+        )
+        self.server_client_port += (
+            1
+            if self.server_client_port <= self.max_server_client_port
+            else self.master_server_client_port
+        )
 
     def sendrecv_multicast(self):
         try:
             message = pickle.dumps("127.0.1.1")
-            multicast_group = (self.multicast_addr, self.multicast_port)
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.settimeout(0.9)
             # Set the time-to-live for messages to 1 so they do not
@@ -102,6 +116,7 @@ class CoreEngine():
             ttl = struct.pack('b', 1)
             self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
             while True:
+                multicast_group = (self.multicast_addr, self.multicast_port)
                 self.sock.sendto(message, multicast_group)
                 while True:                        
                     try:
@@ -110,6 +125,7 @@ class CoreEngine():
                     except socket.timeout:
                         print('Server timed out, no responses')
                         self.sock.settimeout(10)
+                        self.increase_ports()
                         break
                     except socket.error as e:
                         print('Error al recv de multicast ' + str(e.errno))
@@ -123,7 +139,7 @@ class CoreEngine():
 
                             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)            
 
-                            res=s.connect((ip, self.server_client_port))
+                            res=s.connect((ip, self.master_server_client_port))
                             if res==None:
                                 print(server)
                                 print(f'Connected to server: {ip}')
@@ -132,6 +148,7 @@ class CoreEngine():
                             else:
                                 print(f'Error Connected to server: {ip},  {res}')
                                 self.sock.close()
+                                self.increase_ports()
                                 break
                     # return -1
         except socket.error as e:
