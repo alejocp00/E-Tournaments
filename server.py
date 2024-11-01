@@ -10,6 +10,7 @@ import logging
 import copy
 from conexiones.gestors.protocol import *
 from conexiones.gestors.socket_thread import socket_thread
+from conexiones.server_info import ServerInfo
 from src.tournaments.tournament_server import tournament_server
 from dotenv import load_dotenv
 import os
@@ -19,14 +20,6 @@ class ConnectionType(Enum):
     Client= 1
     Multicast = 2
 
-class ServerInfo():
-    def __init__(self,id,multicast_port,server_port,client_port):
-        self.id = id
-        self.multicast_port = multicast_port
-        self.server_port = server_port
-        self.client_port = client_port
-    
-
 # This class will be the server engine, where you add a new node if a new tournament is created, look up for the replica and other requests
 class server:
 
@@ -34,10 +27,10 @@ class server:
         load_dotenv()
 
         self.master_port_server  = int(os.getenv('PORT_SERVER'))
-        self.current_port_server = self.master_port_server
+        self.current_server_port = self.master_port_server
         self.max_port_server = int(os.getenv('MAX_PORT_SERVER'))
         self.master_port_client = int(os.getenv('PORT_CLIENT'))
-        self.current_port_client = self.master_port_client
+        self.current_client_port = self.master_port_client
         self.max_port_client = int(os.getenv('MAX_PORT_CLIENT'))
         self.multicast_addr = os.getenv('MULTICAST_ADDR')
         self.master_multicast_port=int(os.getenv('MULTICAST_PORT'))
@@ -156,18 +149,21 @@ class server:
         else:
             new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             ip = "127.0.1.1"
-            
+
         _,port=self.bind_to_address(new_sock,ip,ConnectionType.Multicast)
 
-        if port ==self.master_multicast_port or port == self.master_port_client or port == self.master_server_client:
+        if port ==self.master_multicast_port or port == self.master_port_client or port == self.master_port_server:
             if connection_type == ConnectionType.Multicast:
-                self.sock_multicast.close()
+                if self.sock_multicast:
+                    self.sock_multicast.close()
                 self.sock_multicast = new_sock
             elif connection_type == ConnectionType.Client:
-                self.sock_client.close()
+                if self.sock_client:
+                    self.sock_client.close()
                 self.sock_client= new_sock
             else:
-                self.sock_server.close()
+                if self.sock_server:
+                    self.sock_server.close()
                 self.sock_server= new_sock
         else:
             new_sock.close()
@@ -178,11 +174,11 @@ class server:
         port = self.current_multicast_port
         master_port = self.master_multicast_port
         if type == ConnectionType.Server:
-            port = self.master_port_server
+            port = self.current_server_port
             max_port = self.max_port_server
             master_port = self.master_port_server
         elif type == ConnectionType.Client:
-            port = self.master_port_client
+            port = self.current_client_port
             max_port = self.max_port_client
             master_port = self.master_port_client
 
@@ -197,9 +193,9 @@ class server:
                 port += 1
 
             if ConnectionType.Server == type:
-                self.current_port_server = port
+                self.current_server_port = port
             elif ConnectionType.Client == type:
-                self.current_port_client = port
+                self.current_client_port = port
             elif ConnectionType.Multicast == type:
                 self.current_multicast_port = port
 
@@ -264,8 +260,10 @@ class server:
             else:          
                 if (data):
                     data = pickle.loads(data)
+                    print(data)
                     if(type(data) == ServerInfo): #servidor solicitando entrar
-                        data = self.receive_server(data.id, ("127.0.1.1",data.multicast_port), self.sock_multicast)
+                        print('es un server')
+                        data = self.receive_server(data.id, ('',data.multicast_port), self.sock_multicast)
                     else: #cliente solicitando entrar
                         if (self.ip == self.leader and not self.game_pause):
                             self.sg.ip = data
@@ -374,7 +372,7 @@ class server:
                 self.succesor_rlock.release()
                 logging.warning(f'-------------------Me conecte a {address[0]} : {data}')
             else:
-                logging.warning(f'-------------------NOOOOO Me conecte a {address[0]} : {data} retorne {res}')
+                logging.warning(f'-------------------No Me conecte a {address[0]} : {data} retorne {res}')
                 pass
 
         elif(len(self.predecesor) and self.predecesor[0] > self.id and data < self.id):
@@ -431,8 +429,8 @@ class server:
         return None
 
     def send_multicast(self):
-        message = pickle.dumps(self.id)
-        multicast_group = (self.multicast_addr, self.current_multicast_port)
+        message = pickle.dumps(ServerInfo(self.id,self.current_multicast_port,self.current_server_port,self.current_client_port))
+        multicast_group = (self.multicast_addr, self.master_multicast_port)
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.settimeout(0.9)
         ttl = struct.pack('b', 1)
@@ -579,8 +577,10 @@ class server:
                         sms = self.sd
                         self.sd.already_sent = True
                         logging.warning(f'estoy enviando sms xq alguien se cayo: {self.sd}')
+                        print(f'estoy enviando sms xq alguien se cayo: {self.sd}')
                     elif(self.dg.active and len(self.succesor) and ip == self.succesor[1] and not self.dg.already_sent ):
                         sms = self.dg
+                        print(sms)
                         self.dg.already_sent = True
                         self.dg.active_games =len(self.game_threads)
                         a = len(self.dg.games)
@@ -1513,14 +1513,47 @@ class server:
             logging.warning(f'juegos incompletos hice distribute dentro de incompleta {b}')
             self.distribute_games(game_list, ip,len(self.game_threads))
 
+    def set_ports(self):
+        mp = self.master_multicast_port
+        cmp = mp
+        cp = self.master_port_client
+        ccp = cp
+        sp = self.master_port_server
+        csp = sp
+        multicast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+
+        sockets = [(multicast,'',cmp), (client,"127.0.1.1",ccp), (server,"127.0.1.1",csp)]
+
+        for i,(sock,ip,port) in enumerate(sockets):
+            bonded = False
+            while not bonded:
+                try:
+                    sock.bind((ip, port))
+                    if i == 0:
+                        self.current_multicast_port = port
+                    elif i == 1:
+                        self.current_client_port = port
+                    else:
+                        self.current_server_port = port
+                    bonded = True
+                    sock.close()
+                except socket.error as e:
+                    if e.errno == 98:
+                        port+=1
+
 
 def main():
     logging.basicConfig(filename='server.log', filemode='w', format='%(asctime)s - %(message)s')#, filemode='w', format='%(message)s')
     s = server(160)
+    s.set_ports()
     thread = threading.Thread(target=s.create_server)
     thread.start()    
-    s.send_multicast()    
     thread2 = threading.Thread(target=s.receive_multicast)
     thread2.start()
+    time.sleep(5)
+    s.send_multicast()
 
 main()
