@@ -95,13 +95,13 @@ class CoreEngine():
         #        print(f"The Winner is: {tournament.get_winner()}")
         return data
     def increase_ports(self):
-        self.multicast_port += (
-            1
+        self.multicast_port = (
+            self.multicast_port+1
             if self.multicast_port <= self.max_multicast_port
             else self.master_multicast_port
         )
-        self.server_client_port += (
-            1
+        self.server_client_port = (
+            self.server_client_port+1
             if self.server_client_port <= self.max_server_client_port
             else self.master_server_client_port
         )
@@ -117,6 +117,7 @@ class CoreEngine():
             self.sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
             while True:
                 multicast_group = (self.multicast_addr, self.multicast_port)
+                print(f"Buscando multicast en puerto {self.multicast_port}")
                 self.sock.sendto(message, multicast_group)
                 while True:                        
                     try:
@@ -139,14 +140,14 @@ class CoreEngine():
 
                             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)            
 
-                            res=s.connect((ip, self.master_server_client_port))
+                            res=s.connect((ip, self.server_client_port))
                             if res==None:
                                 print(server)
                                 print(f'Connected to server: {ip}')
                                 logging.warning(f'Connected to server: {ip}')
                                 return s,data
                             else:
-                                print(f'Error Connected to server: {ip},  {res}')
+                                print(f'Error Connected to server: {ip}:{self.server_client_port},  {res}')
                                 self.sock.close()
                                 self.increase_ports()
                                 break
