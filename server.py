@@ -151,6 +151,11 @@ class server:
         client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client_server_ip = "127.0.1.1"
+        multicast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        multicast_ip = ''
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_server_ip = "127.0.1.1"
 
         multicast_socket.bind((multicast_ip, self.master_multicast_port))
         self.current_multicast_port = self.master_multicast_port
@@ -399,7 +404,7 @@ class server:
                     print(data)
                     if(type(data) == ServerInfo): #servidor solicitando entrar
                         print('es un server')
-                        data = self.receive_server(data.id, ('',data.multicast_port), self.sock_multicast)
+                        data = self.receive_server(data.id, (self.ip,data.server_port), (self.ip, data.multicast_port), self.sock_multicast)
                     else: #cliente solicitando entrar
                         if (self.ip == self.leader and not self.game_pause):
                             self.sg.ip = data
@@ -436,104 +441,116 @@ class server:
 
         else:
             if  self.leader not in self.connections_in:
+
                 self.tnmt_per_client_replica = {}                        
                 self.send_leader_replica = []
             if self.sock_client!=None:
                 self.sock_client.close()
                 print('>>>>> dejé de ser server leader <<<<<')
 
-    def receive_server(self,data, address, sock):  
+    def receive_server(self,data, address_server, address_multicast, sock):  
         self.stl.pause
         self.succesor_rlock.acquire()
         self.predecesor_rlock.acquire()
-        if self.ip==address: 
+        if (self.ip, self.current_server_port) ==address_server: 
             pass                
         elif (len(self.succesor) == 0 and data > self.id):
             logging.warning(f'en receive_multicast. No tengo sucesor y self.id = {self.id} < {data} = data')
-            my_id = pickle.dumps([self.id, self.succesor_table, False, self.leader, self.leader_id])
-            sock.sendto(my_id, address)
+            
+            #my_id = pickle.dumps(ServerInfo(self.id, self.succesor_table, False, self.leader, self.leader_id))
+            my_id = pickle.dumps(ServerInfo(self.id, self.current_multicast_port, self.current_server_port, self.current_client_port))
+            sock.sendto(my_id, address_multicast)
             time.sleep(.5)
-            logging.warning(f'en receive multicast estoy enviando a {address[0]} succesor_table {self.succesor_table}')
-            res=self.connect_to(address[0])
+            logging.warning(f'en receive multicast estoy enviando a {address_multicast} succesor_table {self.succesor_table}')
+            res=self.connect_to(address_server)
             if res==None:
                 self.succesor_rlock.acquire()
-                self.succesor = [data, address[0]]
+                self.succesor = [data, address_server]
                 self.succesor_rlock.release()
-                logging.warning(f'-------------------Me conecte a {address[0]} : {data}')
+                logging.warning(f'-------------------Me conecte a {address_server} : {data}')
             else:
-                logging.warning(f'-------------------NOOO Me conecte a {address[0]} : {data} retorne {res}')
+                logging.warning(f'-------------------NOOO Me conecte a {address_server} : {data} retorne {res}')
                 pass
 
         elif(len(self.predecesor) == 0 and data < self.id):
             logging.warning(f'en receive_multicast. No tengo predecesor y self.id = {self.id} > {data} = data')                        
-            my_id = pickle.dumps([self.id, self.succesor_table, True, None, self.leader, self.leader_id])
-            sent= sock.sendto(my_id, address)
+            
+            #my_id = pickle.dumps(ServerInfo(self.id, self.succesor_table, True, None, self.leader, self.leader_id))
+            my_id = pickle.dumps(ServerInfo(self.id, self.current_multicast_port, self.current_server_port, self.current_client_port))
+            sent= sock.sendto(my_id, address_multicast)
             self.predecesor_rlock.acquire()
-            self.predecesor = [data, address[0]]
+            self.predecesor = [data, address_server]
             self.predecesor_rlock.release()
-            logging.warning(f'Le digo a {address[0]} : {data} que se conecte a mi ({sent} bytes)')
+            logging.warning(f'Le digo a {address_server} : {data} que se conecte a mi ({sent} bytes)')
 
         elif(len(self.succesor) and data > self.id and self.id > self.succesor[0]):
             logging.warning(f'en receive_multicast. Mi sucesor es menor que yo self.id = {self.id} < {self.succesor[0]} = sucesor y data mayor que yo')
             if self.succesor[1] in self.connections_out:
                 self.connections_out[self.succesor[1]].active = False
-            res=self.connect_to(address[0])
+            res=self.connect_to(address_server)
             if res==None:
                 self.succesor_rlock.acquire()
-                self.succesor = [data, address[0]]
+                self.succesor = [data, address_server]
                 self.succesor_rlock.release()
-                logging.warning(f'-------------------Me conecte a {address[0]} : {data}')
+                logging.warning(f'-------------------Me conecte a {address_server} : {data}')
             else:
-                logging.warning(f'-------------------NOOOOO Me conecte a {address[0]} : {data} retorne {res}')
+                logging.warning(f'-------------------NOOOOO Me conecte a {address_server} : {data} retorne {res}')
                 pass
 
         elif(len(self.predecesor) and data > self.predecesor[0] and self.id < self.predecesor[0]):
             logging.warning(f'en receive_multicast. Mi predecesor es mayor que yo self.id = {self.id} < {self.predecesor[0]} = predecesor y data mayor que yo')
             if self.predecesor[1] in self.connections_in:
                 self.connections_in[self.predecesor[1]].active = False
-            my_id = pickle.dumps([self.id, self.succesor_table, True, self.predecesor, self.leader, self.leader_id])
-            sock.sendto(my_id, address)
+            
+            #my_id = pickle.dumps(ServerInfo(self.id, self.succesor_table, True, self.predecesor, self.leader, self.leader_id)
+            my_id = pickle.dumps(ServerInfo(self.id, self.current_multicast_port, self.current_server_port, self.current_client_port))
+            sock.sendto(my_id, address_multicast)
             self.predecesor_rlock.acquire()
-            self.predecesor = [data, address[0]]
+            self.predecesor = [data, address_server]
             self.predecesor_rlock.release()
-            logging.warning(f'Le digo a {address[0]} : {data} que se conecte a mi')
+            logging.warning(f'Le digo a {address_server} : {data} que se conecte a mi')
 
         elif(len(self.succesor) and self.succesor[0] < self.id and data < self.succesor[0]):
-            res=self.connect_to(address[0])
+            res=self.connect_to(address_server)
             if res==None:
                 if self.succesor[1] in self.connections_out:
                     self.connections_out[self.succesor[1]].active = False
                 self.succesor_rlock.acquire()
-                self.succesor = [data, address[0]]
+                self.succesor = [data, address_server]
                 self.succesor_rlock.release()
-                logging.warning(f'-------------------Me conecte a {address[0]} : {data}')
+                logging.warning(f'-------------------Me conecte a {address_server} : {data}')
             else:
-                logging.warning(f'-------------------No Me conecte a {address[0]} : {data} retorne {res}')
+                logging.warning(f'-------------------No Me conecte a {address_server} : {data} retorne {res}')
                 pass
 
         elif(len(self.predecesor) and self.predecesor[0] > self.id and data < self.id):
             logging.warning(f'en receive_multicast. Mi predecesor es mayor que yo self.id = {self.id} < {self.predecesor[0]} = predecesor y data mayor que yo')
             if self.predecesor[1] in self.connections_in:
                 self.connections_in[self.predecesor[1]].active = False
-            my_id = pickle.dumps([self.id, self.succesor_table, True, self.predecesor, self.leader, self.leader_id])
-            sock.sendto(my_id, address)
+            
+            #my_id = pickle.dumps([self.id, self.succesor_table, True, self.predecesor, self.leader, self.leader_id])
+            my_id = pickle.dumps(ServerInfo(self.id, self.current_multicast_port, self.current_server_port, self.current_client_port))
+            sock.sendto(my_id, address_multicast)
             self.predecesor_rlock.acquire()
-            self.predecesor = [data, address[0]]
+            self.predecesor = [data, address_server]
             self.predecesor_rlock.release()
-            logging.warning(f'Le digo a {address[0]} : {data} que se conecte a mi')
+            logging.warning(f'Le digo a {address_server} : {data} que se conecte a mi')
 
         elif(data < self.id and data > self.predecesor[0]):
             logging.warning(f'en receive_multicast. {data} es menor ( < ) que mi id : {self.id} y mayor que e de mi predecesor : {self.predecesor[0]}')
-            my_id = pickle.dumps([self.id, self.succesor_table, True, self.predecesor, self.leader, self.leader_id])
+            
+            #my_id = pickle.dumps([self.id, self.succesor_table, True, self.predecesor, self.leader, self.leader_id])
+            my_id = pickle.dumps(ServerInfo(self.id, self.current_multicast_port, self.current_server_port, self.current_client_port))
+            
             self.connections_in_rlock.acquire()
             if self.predecesor[1] in self.connections_in:
                 self.connections_in[self.predecesor[1]].active = False 
             self.connections_in_rlock.release()
-            sock.sendto(my_id, address) 
+            sock.sendto(my_id, address_multicast) 
             self.predecesor_rlock.acquire()
-            self.predecesor = [data, address[0]]
+            self.predecesor = [data, address_server]
             self.predecesor_rlock.release()
-            logging.warning(f'Le digo a {address[0]} : {data} que se conecte a mi')
+            logging.warning(f'Le digo a {address_server} : {data} que se conecte a mi')
 
         elif(data > self.id and data < self.succesor[0]):
             logging.warning(f'en receive_multicast. {data} es mayor que mi id : {self.id} y menor que e de mi sucesor : {self.succesor[0]}')
@@ -541,14 +558,14 @@ class server:
             if self.succesor[1] in self.connections_out:
                 self.connections_out[self.succesor[1]].active = False
             self.connections_out_rlock.acquire()
-            res=self.connect_to(address[0])
+            res=self.connect_to(address_server)
             if res==None:
                 self.succesor_rlock.acquire()
-                self.succesor = [data, address[0]]
+                self.succesor = [data, address_server]
                 self.succesor_rlock.release()
-                logging.warning(f'------------------Me conecte a : {address[0]} : {data}  ')
+                logging.warning(f'------------------Me conecte a : {address_server} : {data}  ')
             else:
-                logging.warning(f'------------------NOOOOOO Me conecte a {address[0]} : {data} retorne {res}')
+                logging.warning(f'------------------NOOOOOO Me conecte a {address_server} : {data} retorne {res}')
                 pass
         else:
             logging.warning('en receive_multicast. El que entro {address[0]} no tiene nada que ver conmigo')
@@ -557,7 +574,7 @@ class server:
         self.succesor_rlock.release()
         self.predecesor_rlock.release()                    
         self.succesor_table_rlock.acquire()   
-        self.succesor_table[data] = address
+        self.succesor_table[data] = address_server
         self.succesor_table = dict(sorted(self.succesor_table.items(), key=lambda item:item[0]))
         self.succesor_table_rlock.release()   
         self.stl.pause = False
@@ -666,8 +683,7 @@ class server:
         except:
             # print('Error al crear server en except')
             pass
-    # 1
-
+ 
     def create_server_client(self):
         self.sock_client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if self.sock_client==-1:
@@ -692,7 +708,7 @@ class server:
 
             # thread_rec.join()
 
-    def send_server(self, ip):
+    def send_server(self, adr):
         play_count = self.chkp_repl
         send_leader_count = self.chkp_play   #si send_server orig se inicializa con 0, si no a partir del ultimo chkp
         b=len(self.send_leader)
@@ -702,26 +718,26 @@ class server:
         len_send_leader = 0
         server_out = 0
 
-        sock = self.connections_out[ip].sock
+        sock = self.connections_out[adr].sock
         try:
             sock.settimeout(5)
-            while self.connections_out[ip].active:
+            while self.connections_out[adr].active:
                 with self.lock:
                     sms = None #mensaje en string
                     sm = None  #mensaje en bytes
-                    if(len(self.succesor) > 0 and ip == self.succesor[1] and not self.sd.already_sent and (self.sd.active or len(self.sd.server_down) > 0)):
+                    if(len(self.succesor) > 0 and adr == self.succesor[1] and not self.sd.already_sent and (self.sd.active or len(self.sd.server_down) > 0)):
                         sms = self.sd
                         self.sd.already_sent = True
                         logging.warning(f'estoy enviando sms xq alguien se cayo: {self.sd}')
                         print(f'estoy enviando sms xq alguien se cayo: {self.sd}')
-                    elif(self.dg.active and len(self.succesor) and ip == self.succesor[1] and not self.dg.already_sent ):
+                    elif(self.dg.active and len(self.succesor) and adr == self.succesor[1] and not self.dg.already_sent ):
                         sms = self.dg
                         print(sms)
                         self.dg.already_sent = True
                         self.dg.active_games =len(self.game_threads)
                         a = len(self.dg.games)
-                        logging.warning(f'/////--------Estoy enviando mensaje DG len(self.dg.games)={a} a ip {ip}')
-                    elif ((self.leader_id != None  and ip == self.find_node(self.leader_id)) or (self.ip==self.leader and len(self.succesor) > 0 and ip == self.succesor[1]))  and not self.stl.pause :
+                        logging.warning(f'/////--------Estoy enviando mensaje DG len(self.dg.games)={a} a ip {adr}')
+                    elif ((self.leader_id != None  and adr == self.find_node(self.leader_id)) or (self.ip==self.leader and len(self.succesor) > 0 and adr == self.succesor[1]))  and not self.stl.pause :
                         if len(self.rep)==len(self.connection_server)-1:  self.rep=[]
                         if not len(self.rep):
                             self.stl.default()
@@ -747,10 +763,10 @@ class server:
                                     self.stl.tnmt_per_client = self.tnmt_per_client                                    
                                     sms = self.stl
                     elif not self.stl.pause and (self.stl.repl!=None):
-                        logging.warning(f'entre en el rep con ip:{ip}')
-                        if ip not in self.rep:
+                        logging.warning(f'entre en el rep con ip:{adr}')
+                        if adr not in self.rep:
                             self.stl.play = None
-                            self.rep.append(ip)
+                            self.rep.append(adr)
                             sms = self.stl                        
                     if sms == None:
                         times += 1                        
@@ -765,7 +781,7 @@ class server:
                             if(type(sms) == sd and self.ip != self.sd.sender):                                
                                 self.sd.default()
                             elif type(sms) == dg:
-                                logging.warning(f'send server DG enviado a ip {ip}')    
+                                logging.warning(f'send server DG enviado a adr {adr}')    
                                 self.dg.active = False
                                 self.dg.already_sent = False
                             elif type(sms) == stl:                                 
@@ -773,12 +789,12 @@ class server:
                                 if self.stl.repl!=None: 
                                     play_count = lon                         
                                     for i in self.stl.repl:
-                                        logging.warning(f'&.&.& sender envio stl.rep a ip={ip}  j1:{i[0][0][0].name} j2:{i[0][0][1].name} jugada:{i[0][1:]}  ')
+                                        logging.warning(f'&.&.& sender envio stl.rep a adr={adr}  j1:{i[3].players[0].name} j2:{i[3].players[1].name} jugada:{i[0]}  ')
                                     #    pass
                                 if self.stl.play!=None:     
                                     logging.warning(f'&.&.& sender envio stl.play leader={self.leader} send_leader_count={send_leader_count} len_send_leader={len_send_leader}')
                                     for i in self.stl.play:
-                                        logging.warning(f'&.&.& sender envio stl.play a ip={ip}  j1:{i[0][0][0].name} j2:{i[0][0][1].name} jugada:{i[0][1:]}  ')
+                                        logging.warning(f'&.&.& sender envio stl.play a ip={adr}  j1:{i[3].players[0].name} j2:{i[3].players[1].name} jugada:{i[0]}  ')
                                     #    pass
                                     send_leader_count = len_send_leader 
 
@@ -787,7 +803,7 @@ class server:
                             time.sleep(.2)
 
                     except socket.error as e: 
-                        if ip != self.succesor[1]:
+                        if adr != self.succesor[1]:
                             logging.warning('lock en send_server error ip != self.succesor[1]')
                             self.game_pause = True 
                             if type(sms) == stl:
@@ -796,8 +812,8 @@ class server:
                             self.game_pause = True 
                             if type(sms) == stl:
                                 self.stl.pause = True 
-                            logging.warning('lock en send_server error {} de {}  '.format(e.errno, ip))
-                            self.connections_out[ip].active=False
+                            logging.warning('lock en send_server error {} de {}  '.format(e.errno, adr))
+                            self.connections_out[adr].active=False
                             self.succesor_table.pop(self.succesor[0]) 
                             self.sd.server_down.append(self.succesor)
                             self.sd.resumed_games.append(self.succesor[1])
@@ -832,8 +848,8 @@ class server:
                                     self.stl.pause = False
                                     self.game_pause = False
                                     self.sd.default()
-                                    if ip in self.connections_out:
-                                        self.connections_out[ip].active=False
+                                    if adr in self.connections_out:
+                                        self.connections_out[adr].active=False
                                 else:
                                     ipp = self.succesor_table[idd]
                                     logging.warning(f'en send_server. Me voy a conectar a {ipp}----------------------')
@@ -861,7 +877,7 @@ class server:
 
                                         if(self.dg.active):
                                             a = len(self.dg.games)
-                                            logging.warning(f'sock error con DG.active=true {self.dg.client_ip} en ip {ip} y len sms.games={a}')
+                                            logging.warning(f'sock error con DG.active=true {self.dg.client_ip} en ip {adr} y len sms.games={a}')
                                             for index, i in enumerate(self.dg.games):
                                                 print(f'sock error de send server con DG.act del client {self.dg.client_ip} game_list[{index}] es: player1={i[0]._players[0].name}, player2={i[0]._players[1].name}')
                                                 pass
@@ -876,8 +892,8 @@ class server:
                                         break
                                     else:                        
                                         logging.warning(f'en send_server. No pude conectarme a : {ipp}, error {res}, voy pal sgte idd es {idd}  ')
-                                        if ip in self.connections_out:
-                                            self.connections_out[ip].active=False
+                                        if adr in self.connections_out:
+                                            self.connections_out[adr].active=False
                                         self.sd.server_down.append([idd, ipp])
                                         self.sd.resumed_games.append(ipp)
                             for i in self.sd.server_down:
@@ -885,14 +901,14 @@ class server:
                         break
 
         except KeyError as e:
-            logging.warning(f'send server except keyerror {KeyError} , sali del procedimiento ip {ip}  connec ot {self.connections_out} connec in ={self.connections_in}')                        
+            logging.warning(f'send server except keyerror {KeyError} , sali del procedimiento ip {adr}  connec ot {self.connections_out} connec in ={self.connections_in}')                        
             pass
 
-        if ip in self.connections_out:
+        if adr in self.connections_out:
             self.connections_out_rlock.acquire()
-            self.connections_out.pop(ip)
+            self.connections_out.pop(adr)
             self.connections_out_rlock.release()
-            self.connection_server.pop(ip)
+            self.connection_server.pop(adr)
             sock.close()
 
     def receiver(self, ip):
@@ -1091,18 +1107,20 @@ class server:
             sock.close()
         logging.warning(f'en receiver. Deje de recibir de {ip}')
 
-    def connect_to(self, ip):
+    def connect_to(self, adr):
         try:
-            print(f"En Connect to me entró este ip papu: {ip}")
+            print(f"En Connect to me entró este ip papu: {adr}")
+            if adr == (self.ip, self.current_server_port):
+                return
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)                
-            res=s.connect((ip, self.master_server_port))
-            logging.warning(f'resultado de la connect: {res} ip {ip}')
+            res=s.connect(adr)
+            logging.warning(f'resultado de la connect: {res} ip {adr}')
             if res == None:
                 self.connections_out_rlock.acquire()
-                self.connections_out[ip]= socket_thread(s, True)
+                self.connections_out[adr]= socket_thread(s, True)
                 self.connections_out_rlock.release()
-                self.connection_server[ip] = threading.Thread(target=self.send_server, args=(ip,))
-                self.connection_server[ip].start()
+                self.connection_server[adr] = threading.Thread(target=self.send_server, args=(adr,))
+                self.connection_server[adr].start()
                 logging.warning(f'en conect_to connect_out es {self.connections_out}')
             return res
         except socket.error as e:
@@ -1198,7 +1216,7 @@ class server:
         for i in self.finger_table:
             res=None
             if (self.finger_table[i] not in self.connections_out and self.finger_table[i] != self.ip):
-                res=self.connect_to(self.finger_table[i][0])
+                res=self.connect_to(self.finger_table[i])
                 logging.warning(f'--------------me conecte a {self.finger_table[i]} por finger table res={res}')
             return res
 
@@ -1676,8 +1694,10 @@ class server:
                     bonded = True
                     sock.close()
                 except socket.error as e:
-                    if e.errno == 98:
-                        port+=1
+                    #if e.errno == 98:
+                    port+=1
+
+
 
 
 def main():
