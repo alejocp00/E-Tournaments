@@ -14,6 +14,7 @@ from conexiones.server_info import ServerInfo
 from src.tournaments.tournament_server import tournament_server
 from dotenv import load_dotenv
 import os
+import zmq
 
 class ConnectionType(Enum):
     Server = 0
@@ -26,8 +27,8 @@ class server:
     def __init__(self, bits) -> None:
         load_dotenv()
 
-        self.master_port_server  = int(os.getenv('PORT_SERVER'))
-        self.current_server_port = self.master_port_server
+        self.master_server_port  = int(os.getenv('PORT_SERVER'))
+        self.current_server_port = self.master_server_port
         self.max_port_server = int(os.getenv('MAX_PORT_SERVER'))
         self.master_port_client = int(os.getenv('PORT_CLIENT'))
         self.current_client_port = self.master_port_client
@@ -36,7 +37,11 @@ class server:
         self.master_multicast_port=int(os.getenv('MULTICAST_PORT'))
         self.current_multicast_port = self.master_multicast_port
         self.max_multicast_port = int(os.getenv('MAX_MULTICAST_PORT'))
+        self.status_port = int(os.getenv("STATUS_PORT"))
+        self.server_refresh_rate_time = int(os.getenv("SERVER_UPDATE_RATE_TIME"))
+        self.live_signal_port = int(os.getenv("LIVE_SIGNAL_PORT"))
 
+        self.server_alive = True
         self.sock_multicast = None 
         self.sock_server = None
 
@@ -126,7 +131,7 @@ class server:
         self.rep_rlock  = threading.RLock()
 
     def wait_for_down(self,server_address,sock):
-        while True:
+        while self.server_alive:
             try:
                 sock.bind(server_address)
                 print("conectándome al server")
@@ -139,34 +144,165 @@ class server:
                 return
             time.sleep(1)
 
-    def rebind_ports(self,connection_type:ConnectionType):
+    def rebind_ports(self):
         # Closing actual connection and start the bind process to the master port
-        new_sock = None
-        ip = ''
-        if connection_type == ConnectionType.Multicast:
-            new_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            ip = ''
-        else:
-            new_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            ip = "127.0.1.1"
+        multicast_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        multicast_ip = ''
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client_server_ip = "127.0.1.1"
 
-        _,port=self.bind_to_address(new_sock,ip,ConnectionType.Multicast)
+        multicast_socket.bind((multicast_ip, self.master_multicast_port))
+        self.current_multicast_port = self.master_multicast_port
+        client_socket.bind((client_server_ip, self.master_port_client))
+        self.current_client_port = self.master_port_client
+        server_socket.bind((client_server_ip, self.master_server_port))
+        self.current_server_port = self.master_server_port
 
-        if port ==self.master_multicast_port or port == self.master_port_client or port == self.master_port_server:
-            if connection_type == ConnectionType.Multicast:
-                if self.sock_multicast:
-                    self.sock_multicast.close()
-                self.sock_multicast = new_sock
-            elif connection_type == ConnectionType.Client:
-                if self.sock_client:
-                    self.sock_client.close()
-                self.sock_client= new_sock
+        if self.sock_multicast:
+            self.sock_multicast.close()
+        self.sock_multicast = multicast_socket
+        if self.sock_client:
+            self.sock_client.close()
+        self.sock_client= client_socket
+        if self.sock_server:
+            self.sock_server.close()
+        self.sock_server= server_socket
+
+    def send_live_signal(self):
+        # Wait until the server is master
+        while self.current_server_port != self.master_server_port:
+            continue
+        print("Soy master, envío señal")
+
+        # Create context and socket
+        context = zmq.Context()
+
+        socket_pub = context.socket(zmq.PUB)
+        socket_pub.bind(f"tcp://*:{self.live_signal_port}")
+
+        # Sent live signal
+        while self.server_alive:
+            socket_pub.send_string("LIVE")
+            time.sleep(1)
+
+    def receive_live_signal(self):
+        # If the server is master, its not neccessary that it receive live signal
+        if self.current_server_port == self.master_server_port:
+            print("Soy master, no recivo señal")
+            return
+        print("No soy master, recivo señal")
+        # Create socket and context
+        context = zmq.Context()
+
+        socket_sub = context.socket(zmq.SUB)
+        socket_sub.connect(f"tcp://localhost:{self.live_signal_port}")
+
+        timeout_ms = 2000
+        socket_sub.setsockopt_string(zmq.SUBSCRIBE, "")
+        socket_sub.setsockopt(zmq.RCVTIMEO, timeout_ms)
+
+        while self.server_alive:
+            try:
+                message = socket_sub.recv_string()
+                print("Master is " + message)
+            except zmq.Again as e:
+                print("Reubicando puertos")
+                try:
+                    self.rebind_ports()
+                    print("Ahora soy master")
+                    return
+                except socket.error as e:
+                    print("Alguien más es master en algún puerto")
+                    continue
+
+    def send_master_status(self):
+        context = zmq.Context()
+
+        socket_pub = context.socket(zmq.PUB)
+        socket_pub.bind("tcp://127.0.1.1:" + str(self.status_port))
+
+        while self.server_alive:
+            # If im master, send my data
+            while self.current_server_port == self.master_server_port:
+                # Serialize the current instance of the server
+                data = pickle.dumps(self)
+
+                # Send the instance
+                socket_pub.send_string(data)
+
+                time.sleep(self.server_refresh_rate_time)
+
+            time.sleep(0.5)
+
+    def receive_master_status(self):
+        if self.current_server_port == self.master_server_port:
+            return
+        context = zmq.Context()
+
+        socket_sub = context.socket(zmq.SUB)
+        socket_sub.bind("tcp://127.0.1.1:" + str(self.status_port))
+
+        while self.server_alive:
+            message = socket_sub.recv_string()
+            other_server = pickle.loads(message)
+            if other_server is not server:
+                print("Data corrupted")
             else:
-                if self.sock_server:
-                    self.sock_server.close()
-                self.sock_server= new_sock
-        else:
-            new_sock.close()
+                self.successor = other_server.successor
+                self.predecesor = other_server.predecesor
+                self.leader = other_server.leader
+                self.leader_id = other_server.leader_id
+                self.sd = other_server.sd
+                self.sg = other_server.sg
+                self.dg = other_server.dg
+                self.gr = other_server.gr
+                self.stl = other_server.stl
+                self.cd = other_server.cd
+                self.sgc = other_server.sgc
+                self.ps = other_server.ps
+                self.pr = other_server.pr
+
+                self.finger_table = other_server.finger_table
+                self.successor_table = other_server.successor_table
+                self.connections_server = other_server.connections_server
+                self.connections_out = other_server.connections_out
+                self.connections_in = other_server.connections_in
+                self.multicast_closed = other_server.multicast_closed
+
+                self.game_threads = other_server.game_threads
+                self.game_pause = other_server.game_pause
+                self.game_list = other_server.game_list
+
+                self.game_replicas = other_server.game_replicas
+
+                self.send_leader = other_server.send_leader
+                self.send_leader_count = other_server.send_leader_count
+                self.server_out = other_server.server_out
+
+                self.play_clients = other_server.play_clients
+
+                self.tnmt_per_client = other_server.tnmt_per_client
+                self.tnmt_per_client_replica = other_server.tnmt_per_client_replica
+
+                self.chkp_repl = other_server.chkp_repl
+                self.chkp_play = other_server.chkp_play
+
+                self.rep = other_server.rep
+
+    def release_sockets(self):
+        try:
+            self.sock_multicast.close()
+        finally:
+            print("Socket multicast cerrado")
+        try:
+            self.sock_client.close()
+        finally:
+            print("Socket client cerrado")
+        try:
+            self.sock_server.close()
+        finally:
+            print("Socket server cerrado")
 
     def bind_to_address(self,sock,ip,type:ConnectionType):
         bonded = False
@@ -176,7 +312,7 @@ class server:
         if type == ConnectionType.Server:
             port = self.current_server_port
             max_port = self.max_port_server
-            master_port = self.master_port_server
+            master_port = self.master_server_port
         elif type == ConnectionType.Client:
             port = self.current_client_port
             max_port = self.max_port_client
@@ -219,7 +355,7 @@ class server:
             return
         print(f'SERVER READY')
         self.sock_multicast.settimeout(10)
-        while True:
+        while self.server_alive:
             try:
                 data, address = self.sock_multicast.recvfrom(4096)
                 print('------------')
@@ -437,12 +573,12 @@ class server:
         sock.setsockopt(socket.IPPROTO_IP, socket.IP_MULTICAST_TTL, ttl)
 
         try:
-            while True:
+            while self.server_alive:
                 sent=sock.sendto(message, multicast_group) # Send data to the multicast group
                 if sent!=0:
                     break
             print(f'Multicast Sent')
-            while True:
+            while self.server_alive:
                 try:
                     data, server = sock.recvfrom(1024)
                     print(pickle.loads(data))
@@ -515,7 +651,7 @@ class server:
             if self.sock_server.listen(5)==-1:
                 print('Error al activar el listen')
                 exit()
-            while True:
+            while self.server_alive:
                 client_socket, client_address = self.sock_server.accept()                
                 ip=client_address
                 self.connections_in_rlock.acquire()
@@ -544,7 +680,7 @@ class server:
         if self.sock_client.listen(5)==-1:
             print('Error al activar el listen client')
             exit()
-        while True:
+        while self.server_alive:
             client_socket, client_address = self.sock_client.accept()                
             ip=client_address
             self.connections_in_rlock.acquire()
@@ -959,7 +1095,7 @@ class server:
         try:
             print(f"En Connect to me entró este ip papu: {ip}")
             s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)                
-            res=s.connect((ip, self.master_port_server))
+            res=s.connect((ip, self.master_server_port))
             logging.warning(f'resultado de la connect: {res} ip {ip}')
             if res == None:
                 self.connections_out_rlock.acquire()
@@ -983,7 +1119,7 @@ class server:
         if ip_in not in self.ps:
             self.ps[ip_in]=ps()
             self.pr[ip_in]=[]
-        while True:        
+        while self.server_alive:        
             if(ip_in in self.tnmt_per_client and not self.tnmt_per_client[ip_in].client_down and not self.tnmt_per_client[ip_in].finished):
                 time = 0
                 try:
@@ -1359,7 +1495,7 @@ class server:
             self.send_leader_rlock.release()   
 
     def update_play_clients(self):
-        while True:
+        while self.server_alive:
             while self.send_leader_count<len(self.send_leader) and not self.game_pause:
                 x = self.set_play_clients(self.send_leader[self.send_leader_count])
                 self.send_leader_count += x
@@ -1518,12 +1654,11 @@ class server:
         cmp = mp
         cp = self.master_port_client
         ccp = cp
-        sp = self.master_port_server
+        sp = self.master_server_port
         csp = sp
         multicast = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
 
         sockets = [(multicast,'',cmp), (client,"127.0.1.1",ccp), (server,"127.0.1.1",csp)]
 
@@ -1546,14 +1681,46 @@ class server:
 
 
 def main():
-    logging.basicConfig(filename='server.log', filemode='w', format='%(asctime)s - %(message)s')#, filemode='w', format='%(message)s')
-    s = server(160)
-    s.set_ports()
-    thread = threading.Thread(target=s.create_server)
-    thread.start()    
-    thread2 = threading.Thread(target=s.receive_multicast)
-    thread2.start()
-    time.sleep(5)
-    s.send_multicast()
+    try:
+        logging.basicConfig(filename='server.log', filemode='w', format='%(asctime)s - %(message)s')#, filemode='w', format='%(message)s')
+        s = server(160)
+        s.set_ports()
+        thread = threading.Thread(target=s.create_server)
+        thread.start()    
+        thread2 = threading.Thread(target=s.receive_multicast)
+        thread2.start()
+        time.sleep(5)
+        s.send_multicast()
+        # thread3 = threading.Thread(target=s.send_master_status)
+        # thread3.start()
+        # thread4 = threading.Thread(target=s.receive_master_status)
+        # thread4.start()
+        # thread5 = threading.Thread(target=s.send_live_signal)
+        # thread5.start()
+        # thread6 = threading.Thread(target=s.receive_live_signal)
+        # thread6.start()
+        while True:
+            continue
+    except KeyboardInterrupt:
+        print("Server exited with ctrl+c")
+        s.server_alive = False
 
+        s.release_sockets()
+
+        # print("-----")
+        # print("Sockets limpios")
+        # print("-----")
+    except:
+        print("some error happen")
+        s.server_alive = False
+        s.release_sockets()
+
+        # print("-----")
+        # print("Sockets limpios")
+        # print("-----")
+    finally:
+        s.release_sockets()
+        print("-----")
+        print("Sockets limpios")
+        print("-----")
 main()
